@@ -44,7 +44,7 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
 target_compile_features(ripstop-codec PUBLIC cxx_std_20)
@@ -91,7 +91,7 @@ if(BUILD_TESTING)
   target_include_directories(
     ripstop-codec-tests
     PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz/doctest
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party
   )
 
   add_test(NAME ripstop-codec-tests COMMAND ripstop-codec-tests)

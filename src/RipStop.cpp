@@ -8,7 +8,7 @@
 #include <limits>
 
 extern "C" {
-#include <miniz.h>
+#include <miniz/miniz.h>
 }
 
 namespace ripstop::codec {

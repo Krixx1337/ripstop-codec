@@ -167,7 +167,7 @@ Or link the alias target:
 target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
 ```
 
-For manual integration without CMake, add `include/` and `third_party/miniz/` to your include paths, then compile `src/RipStop.cpp` and `third_party/miniz/miniz.c` as part of your project. The full setup is documented in [INSTALL.md](./INSTALL.md).
+For manual integration without CMake, add `include/` and `third_party/` to your include paths, then compile `src/RipStop.cpp` and `third_party/miniz/miniz.c` as part of your project. The full setup is documented in [INSTALL.md](./INSTALL.md).
 
 ## More
 

@@ -6,6 +6,6 @@ Upstream notice: `miniz.c 3.1.0 - public domain deflate/inflate ... See "unlicen
 Project note: this bundled copy is distributed under its upstream terms.
 
 2. doctest
-Location: `third_party/miniz/doctest/doctest.h`
+Location: `third_party/doctest/doctest.h`
 Upstream notice: `Distributed under the MIT Software License`
 Project note: this bundled copy is distributed under its upstream MIT license.

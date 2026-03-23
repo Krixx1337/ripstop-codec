@@ -22,14 +22,14 @@ You can also link the alias target:
 target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
 ```
 
-This path automatically carries the public headers, the private `miniz` include path used by the codec implementation, and the C++20 requirement through the target definition in `CMakeLists.txt`.
+This path automatically carries the public headers, the private third-party include path used by the codec implementation, and the C++20 requirement through the target definition in `CMakeLists.txt`.
 
 ## Manual Source Integration
 
 Use this when your project does not use CMake and you want to compile the codec directly inside an existing build system such as a Visual Studio solution, custom game build pipeline, or another native project format.
 
 1. Add `include/` to your project's include directories.
-2. Add `third_party/miniz/` to your project's include directories.
+2. Add `third_party/` to your project's include directories.
 3. Add `src/RipStop.cpp` to your project's source files.
 4. Add `third_party/miniz/miniz.c` to your project's source files.
 5. Build the project as C++20 or newer.
