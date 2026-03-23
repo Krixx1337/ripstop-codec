@@ -1,0 +1,11 @@
+RipStop Codec bundles the following third-party components:
+
+1. miniz
+Location: `third_party/miniz/miniz.c`, `third_party/miniz/miniz.h`
+Upstream notice: `miniz.c 3.1.0 - public domain deflate/inflate ... See "unlicense" statement at the end of this file.`
+Project note: this bundled copy is distributed under its upstream terms.
+
+2. doctest
+Location: `third_party/miniz/doctest/doctest.h`
+Upstream notice: `Distributed under the MIT Software License`
+Project note: this bundled copy is distributed under its upstream MIT license.
