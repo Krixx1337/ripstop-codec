@@ -4,6 +4,7 @@
 #include <bit>
 #include <chrono>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 
@@ -296,7 +297,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
     return Result<Header>{header};
 }
 
-[[nodiscard]] Result<std::vector<std::uint8_t>> read_file_bytes(const std::string& input_path) {
+[[nodiscard]] Result<std::vector<std::uint8_t>> read_file_bytes(const std::filesystem::path& input_path) {
     std::ifstream input(input_path, std::ios::binary | std::ios::ate);
     if (!input) {
         return make_error<std::vector<std::uint8_t>>(ErrorCode::FileOpenFailed);
@@ -325,7 +326,8 @@ void transform_header(Header& header, const ProjectOptions& project) {
     return Result<std::vector<std::uint8_t>>{std::move(data)};
 }
 
-[[nodiscard]] ErrorCode write_file_bytes(const std::string& output_path, std::span<const std::uint8_t> data) {
+[[nodiscard]] ErrorCode write_file_bytes(const std::filesystem::path& output_path,
+                                         std::span<const std::uint8_t> data) {
     std::ofstream output(output_path, std::ios::binary | std::ios::trunc);
     if (!output) {
         return ErrorCode::FileOpenFailed;
@@ -511,8 +513,8 @@ Result<std::string> decode_to_string(std::span<const std::uint8_t> encoded_buffe
     return Result<std::string>{std::string(reinterpret_cast<const char*>(decoded.value.data()), decoded.value.size())};
 }
 
-ErrorCode encode_file(const std::string& input_path,
-                      const std::string& output_path,
+ErrorCode encode_file(const std::filesystem::path& input_path,
+                      const std::filesystem::path& output_path,
                       const ProjectOptions& project,
                       const AssetOptions& asset) {
     Result<std::vector<std::uint8_t>> input = read_file_bytes(input_path);
@@ -528,8 +530,8 @@ ErrorCode encode_file(const std::string& input_path,
     return write_file_bytes(output_path, encoded.value);
 }
 
-ErrorCode decode_file(const std::string& input_path,
-                      const std::string& output_path,
+ErrorCode decode_file(const std::filesystem::path& input_path,
+                      const std::filesystem::path& output_path,
                       const ProjectOptions& project,
                       const AssetOptions& asset) {
     Result<std::vector<std::uint8_t>> input = read_file_bytes(input_path);

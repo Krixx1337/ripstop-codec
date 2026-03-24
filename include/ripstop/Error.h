@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -81,18 +82,22 @@ struct [[nodiscard]] Result {
     }
 
     [[nodiscard]] T& operator*() & noexcept {
+        assert(has_value() && "Attempted to dereference an error Result");
         return value;
     }
 
     [[nodiscard]] const T& operator*() const & noexcept {
+        assert(has_value() && "Attempted to dereference an error Result");
         return value;
     }
 
     [[nodiscard]] T* operator->() noexcept {
+        assert(has_value() && "Attempted to dereference an error Result");
         return &value;
     }
 
     [[nodiscard]] const T* operator->() const noexcept {
+        assert(has_value() && "Attempted to dereference an error Result");
         return &value;
     }
 

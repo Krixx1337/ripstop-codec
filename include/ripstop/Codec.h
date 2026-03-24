@@ -2,7 +2,7 @@
 
 #define RIPSTOP_CODEC_VERSION_MAJOR 1
 #define RIPSTOP_CODEC_VERSION_MINOR 0
-#define RIPSTOP_CODEC_VERSION_PATCH 0
+#define RIPSTOP_CODEC_VERSION_PATCH 1
 #define RIPSTOP_CODEC_VERSION \
     (RIPSTOP_CODEC_VERSION_MAJOR * 10000 + RIPSTOP_CODEC_VERSION_MINOR * 100 + RIPSTOP_CODEC_VERSION_PATCH)
 
@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <span>
 #include <string_view>
@@ -25,7 +26,7 @@ namespace ripstop::codec {
 }
 
 [[nodiscard]] constexpr std::string_view version_string() noexcept {
-    return "1.0.0";
+    return "1.0.1";
 }
 
 using ScramblerFunc = void (*)(std::span<std::uint8_t> buffer, std::uint64_t state, const Header& header);
@@ -89,12 +90,12 @@ template <typename T>
 [[nodiscard]] Result<std::string> decode_to_string(std::span<const std::uint8_t> encoded_buffer,
                                                    const ProjectOptions& project,
                                                    const AssetOptions& asset = {});
-[[nodiscard]] ErrorCode encode_file(const std::string& input_path,
-                                    const std::string& output_path,
+[[nodiscard]] ErrorCode encode_file(const std::filesystem::path& input_path,
+                                    const std::filesystem::path& output_path,
                                     const ProjectOptions& project,
                                     const AssetOptions& asset = {});
-[[nodiscard]] ErrorCode decode_file(const std::string& input_path,
-                                    const std::string& output_path,
+[[nodiscard]] ErrorCode decode_file(const std::filesystem::path& input_path,
+                                    const std::filesystem::path& output_path,
                                     const ProjectOptions& project,
                                     const AssetOptions& asset = {});
 [[nodiscard]] ErrorCode decode_into(std::span<const std::uint8_t> encoded_buffer,

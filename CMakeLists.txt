@@ -11,7 +11,7 @@ endif()
 
 project(
   ripstop-codec
-  VERSION 1.0.0
+  VERSION 1.0.1
   DESCRIPTION "Tear-resistant asset protection for modern games and apps"
   LANGUAGES C CXX
 )
@@ -51,6 +51,7 @@ target_compile_features(ripstop-codec PUBLIC cxx_std_20)
 target_compile_definitions(
   ripstop-codec
   PRIVATE
+    MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
 )

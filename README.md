@@ -152,6 +152,8 @@ To make protected assets harder to classify, set `ProjectOptions::magic` to mimi
 auto err = ripstop::codec::encode_file("input.bin", "output.rip", project);
 ```
 
+The file helpers accept `std::filesystem::path`, so UTF-8 and native wide-character paths work correctly across supported platforms.
+
 ## Integration
 
 For CMake, treat this repository as the source of truth:

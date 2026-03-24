@@ -31,13 +31,14 @@ Use this when your project does not use CMake and you want to compile the codec 
 1. Add `include/` to your project's include directories.
 2. Add `third_party/` to your project's include directories.
 3. Add `src/RipStop.cpp` to your project's source files.
-4. Add `third_party/miniz/miniz.c` to your project's source files.
+4. Add `third_party/miniz/miniz.c` to your project's source files and compile it with `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`.
 5. Build the project as C++20 or newer.
 
 Notes:
 
 - `src/RipStop.cpp` is C++ and must be compiled with C++20 support.
 - `third_party/miniz/miniz.c` is C and is bundled as the codec's compression backend.
+- `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1` keeps the bundled `miniz` private so it does not collide with another linked `zlib` or `miniz`.
 - No Visual Studio `.props` files are required. The repository keeps the integration surface intentionally small so the same instructions work across build systems.
 
 ## Generating your Project Config
@@ -166,7 +167,7 @@ if (ripstop::codec::is_encoded(raw_file_bytes, project.magic)) {
 }
 ```
 
-### Zero-Allocation Decode
+### Decode Into Pre-Allocated Storage
 
 Use `decode_into()` when the destination storage is already allocated:
 
@@ -174,6 +175,8 @@ Use `decode_into()` when the destination storage is already allocated:
 std::vector<std::byte> output(header.value.uncompressed_size);
 auto err = ripstop::codec::decode_into(encoded_bytes, std::span{output}, project, asset);
 ```
+
+If the asset is both compressed and scrambled, `decode_into()` uses a temporary heap buffer for the descrambled compressed payload before decompression. The destination buffer remains caller-owned.
 
 ### Text Decode Convenience
 
@@ -210,5 +213,7 @@ if (err != ripstop::codec::ErrorCode::Success) {
     // log ripstop::codec::to_string(err)
 }
 ```
+
+These helpers accept `std::filesystem::path`, which preserves native Unicode path handling on Windows and POSIX platforms.
 
 `<ripstop/MemStream.h>` is installed as a public header, so decoded buffers can also be wrapped in `ripstop::codec::MemStream` when you need `std::istream`-style parsing over in-memory data.
