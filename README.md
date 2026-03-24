@@ -1,8 +1,10 @@
 # RipStop Codec (C++20)
 
-**Tear-resistant, lightweight asset protection for modern games and apps.**
+**A lightweight C++20 library for protecting game assets, application resources, and proprietary data from casual ripping.**
 
-Named after the reinforced weaving technique used in parachutes, `RipStop Codec` is a lightweight C++20 library for wrapping arbitrary data in a project-owned binary envelope that makes casual asset ripping and signature-based tooling more expensive.
+`RipStop Codec` is a modern C++20 library for wrapping arbitrary data in a project-owned binary envelope that makes casual asset ripping, signature-based tooling, and basic file inspection more expensive. It is designed for games, desktop apps, tools, and other software that need a practical way to harden packaged resources, internal blobs, or proprietary files without redesigning the payload format itself.
+
+If you are searching for how to protect assets from being stolen, how to hide application resources in C++, or how to make binary files harder to identify and extract, this library is built for that use case.
 
 It gives you:
 
@@ -14,6 +16,33 @@ It gives you:
 - a small `std::span`-based API that fits into existing load/save paths
 - an optional zero-copy `std::istream` bridge for decoded buffers in C++20
 
+## How Do I Protect Assets From Being Ripped?
+
+Many developers ask questions like:
+
+- how do I protect game assets from extraction?
+- how do I hide proprietary application files?
+- how can I make JSON, textures, models, or binary resources harder to rip?
+
+Standard formats such as PNG, JSON, MP3, or custom binary blobs are easy for tools to classify because they expose recognizable headers and metadata. `RipStop Codec` solves that by moving data from a public, easy-to-identify layout into a private project-specific wrapper.
+
+It raises the cost of analysis with:
+
+- **Signature camouflage:** choose your own `magic` so shipped files stop looking like the formats every extractor expects
+- **Metadata masking:** everything after the plaintext magic is masked at rest
+- **Contextual scrambling:** bind data to your project and asset context
+- **Integrity validation:** CRC checks help reject corrupted or mismatched decodes
+- **Compression support:** reduce size while keeping the wrapped format private
+
+## Use Cases
+
+RipStop is engine-agnostic and can protect any file format your application already uses:
+
+- **Games:** textures, shaders, meshes, audio, dialogue, save-adjacent resources, and level data
+- **Desktop applications:** proprietary configuration, packaged content, internal databases, and bundled scripts
+- **Creative software:** presets, templates, brushes, sample packs, and other intellectual property
+- **Embedded or edge systems:** lightweight binary payload protection where full encryption is not the goal
+
 ## Why RipStop
 
 - **Engine-agnostic:** wrap textures, JSON, meshes, audio, or custom blobs without redesigning the payload format itself
@@ -21,12 +50,15 @@ It gives you:
 - **Signature camouflage:** choose your own `magic` so shipped files stop looking like the formats every extractor expects
 - **Header stealth:** everything after the plaintext magic is masked at rest
 - **Patch-friendly:** output stays deterministic by default when `nonce = 0`
+- **Lean integration:** fits existing pipelines without imposing a heavyweight packaging system
 
 RipStop intentionally does not ship with a baked-in default `ProjectOptions::magic`. You supply project-owned identity values instead of inheriting a shared global signature.
 
 ## Security Boundary
 
-`RipStop Codec` is **not cryptographic encryption**. It is an obfuscation and integrity layer for hardening assets, caches, or internal data blobs against casual analysis and basic tooling. Do not use it as a substitute for AES or ChaCha20 when you need real confidentiality for secrets, credentials, or user data.
+`RipStop Codec` is **not cryptographic encryption**. It is an obfuscation and integrity layer for hardening assets, caches, application resources, or internal data blobs against casual analysis and basic tooling. Do not use it as a substitute for AES or ChaCha20 when you need real confidentiality for secrets, credentials, or user data.
+
+Its purpose is practical asset protection and file hardening, not strong secrecy against a determined reverse engineer.
 
 ## Quick Start
 
@@ -38,7 +70,7 @@ python path/to/ripstop-codec/tools/generate_key.py
 
 If you prefer to check in a template and edit constants manually, start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h).
 
-### 2. Encode assets into your private format
+### 2. Encode assets or proprietary data into your private format
 
 ```cpp
 #include <ripstop/Codec.h>
@@ -131,7 +163,7 @@ ripstop::codec::MemStream stream(std::span{decoded.value});
 
 `<ripstop/MemStream.h>` stays separate from `<ripstop/Codec.h>` so the core codec API remains lean, but C++20 callers can still pass decoded in-memory data to existing `std::istream`-based loaders without copying it into a `std::stringstream`.
 
-### Add anti-diffing or offset noise when needed
+### How to add anti-diffing or offset noise
 
 ```cpp
 ripstop::codec::AssetOptions asset{
@@ -142,9 +174,13 @@ ripstop::codec::AssetOptions asset{
 };
 ```
 
-### Pro-tip: camouflage pattern
+### How to use signature camouflage
 
 To make protected assets harder to classify, set `ProjectOptions::magic` to mimic a familiar format like PNG: `0x474E5089`. RipStop still stores your private payload and metadata, but automated rippers now see a decoy signature first.
+
+### How to reduce asset swapping mistakes or tampering
+
+Because `format_tag` and `context_seed` participate in decode, mismatched asset identity inputs can cause CRC validation to fail. That gives you a lightweight way to bind decoding to the expected asset context.
 
 ### One-call disk helpers
 
