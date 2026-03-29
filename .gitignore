@@ -25,6 +25,10 @@ mono_crash.*
 [Rr]elease/
 [Rr]eleases/
 
+# Generated local RipStop project config
+/RipStop_Config.h
+/tools/RipStop_Config.h
+
 [Dd]ebug/x64/
 [Dd]ebugPublic/x64/
 [Rr]elease/x64/
