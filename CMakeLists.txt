@@ -54,6 +54,7 @@ target_sources(
       include/ripstop/Format.h
       include/ripstop/MemStream.h
       include/ripstop/detail/constexpr_obfuscation.h
+      include/ripstop/detail/hostile_imports.h
       include/ripstop/detail/memory_hygiene.h
       include/ripstop/detail/polymorphic_error.h
 )
