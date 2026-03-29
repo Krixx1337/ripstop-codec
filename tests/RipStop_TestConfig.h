@@ -35,6 +35,8 @@ struct TestSecurityPolicy {
         return true;
     }
 
+    static inline void OnScrambleState(std::uint64_t&) {}
+
     static inline bool PostDescramble(std::span<std::uint8_t>) {
         return true;
     }

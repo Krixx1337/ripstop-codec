@@ -107,6 +107,10 @@ struct ExampleSecurityPolicy {{
         return true;
     }}
 
+    static inline void OnScrambleState(std::uint64_t& state) {{
+        (void)(state);
+    }}
+
     static inline bool PostDescramble(std::span<std::uint8_t> decodedBuffer) {{
         (void)(decodedBuffer);
         return true;

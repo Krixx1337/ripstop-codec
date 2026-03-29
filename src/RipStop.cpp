@@ -239,6 +239,7 @@ void default_scrambler(std::span<std::uint8_t> buffer, std::uint64_t state, cons
         state ^= utils::hash_string(asset.password);
     }
 
+    Security::OnScrambleState(state);
     return mix64(state);
 }
 
