@@ -171,7 +171,8 @@ The library exposes:
 - `ripstop::codec::peek_header(...)`, which validates and returns the unmasked header without decoding the payload
 - `ripstop::codec::decode_into(...)`, which decodes into caller-owned storage and returns `ErrorCode`
 - `ripstop::codec::decode_to_vector<T>(...)`, which decodes into a freshly allocated typed vector
-- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable string names for logging
+- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable string names in standard builds or hardened numeric strings when `RIPSTOP_HARDEN_ERRORS=1`
+- `ripstop::codec::SecureWipe(...)`, which erases caller-owned sensitive buffers
 - `ripstop::codec::utils::hash_string(...)` and `ripstop::codec::utils::hash_uint64(...)`, which provide deterministic caller-owned seed derivation and are `constexpr`
 
 The simple path is intentionally supported:

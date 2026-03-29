@@ -13,6 +13,8 @@ It gives you:
 - an explicit on-disk `compression_id` so the format can evolve safely
 - optional scrambling tied to your project and asset context
 - CRC validation on decode
+- optional hardened numeric error output with project-specific `ErrorCode` values
+- public `SecureWipe(...)` helpers for caller-owned sensitive buffers
 - a small `std::span`-based API that fits into existing load/save paths
 - an optional zero-copy `std::istream` bridge for decoded buffers in C++20
 
@@ -67,6 +69,12 @@ Its purpose is practical asset protection and file hardening, not strong secrecy
 ```bash
 python path/to/ripstop-codec/tools/generate_key.py
 ```
+
+The generated header now includes:
+- project-owned `magic`, `domain_id`, tags, and secret material
+- `RIPSTOP_ERROR_XOR`
+- randomized `ErrorCode` values for hardened builds
+- helper functions for `MakeProjectOptions()` and `MakeAssetOptions()`
 
 If you prefer to check in a template and edit constants manually, start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h).
 
@@ -146,6 +154,12 @@ if (ripstop::codec::is_encoded(file_bytes, project.magic)) {
 
 ```cpp
 auto json = ripstop::codec::decode_to_string(file_bytes, project);
+```
+
+### Wipe sensitive caller-owned buffers
+
+```cpp
+ripstop::codec::SecureWipe(out_data);
 ```
 
 ### Zero-copy parsing with `std::istream`

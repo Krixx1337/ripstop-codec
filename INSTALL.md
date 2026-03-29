@@ -51,6 +51,8 @@ python tools/generate_key.py
 
 By default this writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.
 
+The generated header now includes project-owned identity constants, an obfuscated project secret, `RIPSTOP_ERROR_XOR`, and randomized `ErrorCode` values for hardened builds.
+
 If you prefer to edit a checked-in template manually, start from [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h). It uses `ripstop::codec::utils::make_obfuscated_secret<...>()`, and `MakeProjectOptions()` resolves the secret at runtime with `.resolve()`.
 
 ## Technical Notes
@@ -185,6 +187,19 @@ Use `decode_to_string()` when the payload is text and you want a `std::string` r
 ```cpp
 auto json = ripstop::codec::decode_to_string(encoded_bytes, project);
 ```
+
+`decode_to_string()` wipes the transient internal byte buffer that RipStop owns before returning the resulting `std::string`.
+
+### Secure Wipe Helpers
+
+Use `SecureWipe(...)` when you want to erase caller-owned buffers after use:
+
+```cpp
+std::string password = "Secret";
+ripstop::codec::SecureWipe(password);
+```
+
+Overloads exist for `std::string`, `std::vector<T>`, and `std::span<T>`.
 
 ### Zero-Copy Stream Parsing
 
