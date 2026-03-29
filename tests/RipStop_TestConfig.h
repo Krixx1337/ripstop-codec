@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 
 #define RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM 1
 #define RIPSTOP_HARDEN_ERRORS 1
@@ -29,4 +30,20 @@ enum class [[nodiscard]] ErrorCode : std::uint32_t {
     FileWriteFailed = 0x10000012u,
 };
 
+struct TestSecurityPolicy {
+    static inline bool PreDecode(std::span<const std::uint8_t>) {
+        return true;
+    }
+
+    static inline bool PostDescramble(std::span<std::uint8_t>) {
+        return true;
+    }
+
+    static inline void OnTamper(ErrorCode) {}
+
+    static inline void OnError(ErrorCode) {}
+};
+
 } // namespace ripstop::codec
+
+#define RIPSTOP_SECURITY_POLICY ::ripstop::codec::TestSecurityPolicy
