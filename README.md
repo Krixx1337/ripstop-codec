@@ -4,6 +4,8 @@
 
 `RipStop Codec` is a modern C++20 library for wrapping arbitrary data in a project-owned binary envelope that makes casual asset ripping, signature-based tooling, and basic file inspection more expensive. It is designed for games, desktop apps, tools, and other software that need a practical way to harden packaged resources, internal blobs, or proprietary files without redesigning the payload format itself.
 
+Looking to securely download RipStop assets over hostile networks? Check out [BurnerNet](https://github.com/Krixx1337/burner-net).
+
 If you are searching for how to protect assets from being stolen, how to hide application resources in C++, or how to make binary files harder to identify and extract, this library is built for that use case.
 
 It gives you:
