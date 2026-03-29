@@ -24,7 +24,29 @@ constexpr std::uint16_t k_known_flags_mask =
 
 template <typename T>
 [[nodiscard]] Result<T> make_error(ErrorCode error) {
+    RIPSTOP_ON_ERROR(error);
     return Result<T>{.error = error};
+}
+
+template <typename T>
+[[nodiscard]] Result<T> make_tamper_error(ErrorCode error) {
+    RIPSTOP_ON_ERROR(error);
+    RIPSTOP_ON_TAMPER();
+    return Result<T>{.error = error};
+}
+
+[[nodiscard]] ErrorCode report_error(ErrorCode error) {
+    if (error != ErrorCode::Success) {
+        RIPSTOP_ON_ERROR(error);
+    }
+
+    return error;
+}
+
+[[nodiscard]] ErrorCode report_tamper_error(ErrorCode error) {
+    RIPSTOP_ON_ERROR(error);
+    RIPSTOP_ON_TAMPER();
+    return error;
 }
 
 [[nodiscard]] bool has_flag(HeaderFlags value, HeaderFlags flag) {
@@ -253,7 +275,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
     transform_header(header, project);
 
     if (header.magic != project.magic) {
-        return make_error<Header>(ErrorCode::MagicMismatch);
+        return make_tamper_error<Header>(ErrorCode::MagicMismatch);
     }
 
     if (header.codec_version > Header::CodecVersion) {
@@ -361,7 +383,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
     if (compression == CompressionType::None) {
         const ErrorCode decompress_error = decompress_payload(payload, output, compression);
         if (decompress_error != ErrorCode::Success) {
-            return decompress_error;
+            return report_error(decompress_error);
         }
 
         if (has_flag(header.flags, HeaderFlags::Scrambled)) {
@@ -372,7 +394,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
         }
 
         if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
-            return ErrorCode::CrcMismatch;
+            return report_tamper_error(ErrorCode::CrcMismatch);
         }
 
         return ErrorCode::Success;
@@ -392,7 +414,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
         if (const ErrorCode error = transform_in_place(temp_payload, project, asset, header);
             error != ErrorCode::Success) {
             SecureWipe(temp_payload);
-            return error;
+            return report_error(error);
         }
         compressed_input = temp_payload;
     }
@@ -400,12 +422,12 @@ void transform_header(Header& header, const ProjectOptions& project) {
     if (const ErrorCode decompress_error = decompress_payload(compressed_input, output, compression);
         decompress_error != ErrorCode::Success) {
         SecureWipe(temp_payload);
-        return decompress_error;
+        return report_error(decompress_error);
     }
 
     if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
         SecureWipe(temp_payload);
-        return ErrorCode::CrcMismatch;
+        return report_tamper_error(ErrorCode::CrcMismatch);
     }
 
     SecureWipe(temp_payload);
@@ -568,7 +590,7 @@ ErrorCode decode_into(std::span<const std::uint8_t> encoded_buffer,
 
     const Header& header = header_result.value;
     if (header.domain_id != project.domain_id) {
-        return ErrorCode::DomainMismatch;
+        return report_tamper_error(ErrorCode::DomainMismatch);
     }
 
     const std::span<const std::uint8_t> payload = encoded_buffer.subspan(header.header_size);

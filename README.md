@@ -69,7 +69,7 @@ Its purpose is practical asset protection and file hardening, not strong secrecy
 ### 1. Generate a project-local config
 
 ```bash
-python path/to/ripstop-codec/tools/generate_key.py
+python path/to/ripstop-codec/tools/generate_config.py
 ```
 
 The generated header now includes:
@@ -91,11 +91,11 @@ If you prefer to check in a template and edit constants manually, start from [te
 
 std::vector<float> mesh_data = {1.0f, 2.0f, 3.0f};
 
-const auto project = example::ripstop::MakeProjectOptions();
+const auto project = ripstop_config::MakeProjectOptions();
 
-const auto asset = example::ripstop::MakeAssetOptions(
-    example::ripstop::tagPrimaryAsset,
-    example::ripstop::HashContextString("meshes/player"));
+const auto asset = ripstop_config::MakeAssetOptions(
+    ripstop_config::tagPrimaryAsset,
+    ripstop_config::HashContextString("meshes/player"));
 
 auto encoded = ripstop::codec::encode(std::span{mesh_data}, project, asset);
 

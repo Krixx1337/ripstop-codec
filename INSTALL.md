@@ -46,7 +46,7 @@ Notes:
 Generate a randomized project-local config header with:
 
 ```bash
-python tools/generate_key.py
+python tools/generate_config.py
 ```
 
 By default this writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.

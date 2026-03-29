@@ -18,3 +18,15 @@
 #ifndef RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM
 #define RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM 0
 #endif
+
+#ifndef RIPSTOP_ON_TAMPER
+#include <cstdlib>
+#define RIPSTOP_ON_TAMPER() std::abort()
+#endif
+
+#ifndef RIPSTOP_ON_ERROR
+#define RIPSTOP_ON_ERROR(code) \
+    do {                       \
+        (void)(code);          \
+    } while (0)
+#endif

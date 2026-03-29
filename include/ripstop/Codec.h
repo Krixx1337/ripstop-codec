@@ -54,10 +54,10 @@ struct AssetOptions {
 };
 
 namespace detail {
-inline constexpr std::uint64_t split_mix_increment = ::hostile_core::split_mix_increment;
+inline constexpr std::uint64_t split_mix_increment = ::ripstop::hostile_core::split_mix_increment;
 
 [[nodiscard]] constexpr std::uint64_t mix64(std::uint64_t x) {
-    return ::hostile_core::mix64(x);
+    return ::ripstop::hostile_core::mix64(x);
 }
 
 template <typename T>
@@ -162,35 +162,35 @@ template <typename T>
 
 namespace utils {
 template <std::uint64_t Secret, std::uint8_t Mask>
-using ObfuscatedSecret = ::hostile_core::ObfuscatedSecret<Secret, Mask>;
+using ObfuscatedSecret = ::ripstop::hostile_core::ObfuscatedSecret<Secret, Mask>;
 
 template <std::uint64_t Secret, std::uint8_t Mask>
 [[nodiscard]] consteval auto make_obfuscated_secret() {
-    return ::hostile_core::make_obfuscated_secret<Secret, Mask>();
+    return ::ripstop::hostile_core::make_obfuscated_secret<Secret, Mask>();
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_string(std::string_view value) {
-    return ::hostile_core::hash_string(value);
+    return ::ripstop::hostile_core::hash_string(value);
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_uint64(std::uint64_t value) {
-    return ::hostile_core::hash_uint64(value);
+    return ::ripstop::hostile_core::hash_uint64(value);
 }
 
 } // namespace utils
 
 inline void SecureWipe(std::string& value) noexcept {
-    ::hostile_core::secure_wipe(value);
+    ::ripstop::hostile_core::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::vector<T>& value) noexcept {
-    ::hostile_core::secure_wipe(value);
+    ::ripstop::hostile_core::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::span<T> value) noexcept {
-    ::hostile_core::secure_wipe(value);
+    ::ripstop::hostile_core::secure_wipe(value);
 }
 
 } // namespace ripstop::codec

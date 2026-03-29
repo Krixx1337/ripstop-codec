@@ -34,7 +34,7 @@ enum class [[nodiscard]] ErrorCode : std::uint32_t {
 
 [[nodiscard]] inline std::string to_string(ErrorCode error) {
 #if RIPSTOP_HARDEN_ERRORS
-    return ::hostile_core::harden_error_code<ErrorCode, static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR)>(error);
+    return ::ripstop::hostile_core::harden_error_code<ErrorCode, static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR)>(error);
 #else
     switch (error) {
     case ErrorCode::Success:

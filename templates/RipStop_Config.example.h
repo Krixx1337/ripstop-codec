@@ -6,6 +6,8 @@
 // If you enable the optional custom ErrorCode enum, define it before including <ripstop/Codec.h>.
 // That lets RipStop pick up the project-specific values during header parsing.
 
+// 1. Error Code Polymorphism
+
 // Optional: switch RipStop to numeric-only error output in release-style builds.
 // Leave the enum override disabled if you prefer the stock sequential values.
 // #define RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM 1
@@ -34,13 +36,18 @@
 // };
 // } // namespace ripstop::codec
 
+// 2. Security Lifecycle Hooks
+
+// #define RIPSTOP_ON_TAMPER()
+// #define RIPSTOP_ON_ERROR(code) do { (void)(code); } while (0)
+
 #include <ripstop/Codec.h>
 
-namespace example::ripstop {
+namespace ripstop_config {
 
 // You can either edit the constants in this file directly, or generate a randomized
 // project-local config with:
-//   python tools/generate_key.py
+//   python tools/generate_config.py
 //
 // Copy this file into your application codebase, rename it to RipStop_Config.h,
 // and replace all placeholder values with project-owned constants.
@@ -52,6 +59,8 @@ namespace example::ripstop {
 // - Changing kDefaultAssetVersion should be treated as a caller-driven cache/version bump.
 //
 // In short: domain, secret, and tags are compatibility boundaries. Rotate them intentionally.
+
+// 3. Asset Identity & Policy
 
 // Project/domain identifier.
 // MUST be replaced for your project.
@@ -68,6 +77,8 @@ inline constexpr std::uint16_t kDefaultAssetVersion = 1u;
 // MUST be replaced with project-owned values.
 inline constexpr std::uint64_t tagPrimaryAsset = 0x1111111122222222ull;
 inline constexpr std::uint64_t tagSecondaryAsset = 0x3333333344444444ull;
+
+// 4. Project Secret
 
 // The compiler stores the masked bytes. `.resolve()` unmasks the 64-bit secret at runtime.
 inline constexpr auto kProjectSecret =
@@ -137,4 +148,4 @@ inline constexpr ripstop::codec::AssetOptions MakeAssetOptions(
     };
 }
 
-} // namespace example::ripstop
+} // namespace ripstop_config
