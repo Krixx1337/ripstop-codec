@@ -20,6 +20,7 @@ ERROR_CODE_NAMES = [
     "CompressionFailed",
     "DecompressionFailed",
     "CrcMismatch",
+    "PreFlightAbort",
     "FileOpenFailed",
     "FileReadFailed",
     "FileWriteFailed",
@@ -94,14 +95,33 @@ enum class ErrorCode : std::uint32_t {{
 
 }} // namespace ripstop::codec
 
-// 2. Security Lifecycle Hooks
-
-#define RIPSTOP_ON_TAMPER()
-#define RIPSTOP_ON_ERROR(code) do {{ (void)(code); }} while (0)
-
 #include <ripstop/Codec.h>
 
 namespace ripstop_config {{
+
+// 2. Security Lifecycle Hooks
+
+struct ExampleSecurityPolicy {{
+    static inline bool PreDecode(std::span<const std::uint8_t> encodedData) {{
+        (void)(encodedData);
+        return true;
+    }}
+
+    static inline bool PostDescramble(std::span<std::uint8_t> decodedBuffer) {{
+        (void)(decodedBuffer);
+        return true;
+    }}
+
+    static inline void OnTamper(::ripstop::codec::ErrorCode code) {{
+        (void)(code);
+    }}
+
+    static inline void OnError(::ripstop::codec::ErrorCode code) {{
+        (void)(code);
+    }}
+}};
+
+#define RIPSTOP_SECURITY_POLICY ::ripstop_config::ExampleSecurityPolicy
 
 // 3. Asset Identity & Policy
 

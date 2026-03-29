@@ -11,7 +11,7 @@
 namespace ripstop::codec {
 
 #if !RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM
-enum class [[nodiscard]] ErrorCode : std::uint32_t {
+enum class ErrorCode : std::uint32_t {
     Success = 0,
     BufferTooSmall,
     MagicMismatch,
@@ -26,6 +26,7 @@ enum class [[nodiscard]] ErrorCode : std::uint32_t {
     CompressionFailed,
     DecompressionFailed,
     CrcMismatch,
+    PreFlightAbort,
     FileOpenFailed,
     FileReadFailed,
     FileWriteFailed
@@ -65,6 +66,8 @@ enum class [[nodiscard]] ErrorCode : std::uint32_t {
         return "DecompressionFailed";
     case ErrorCode::CrcMismatch:
         return "CrcMismatch";
+    case ErrorCode::PreFlightAbort:
+        return "PreFlightAbort";
     case ErrorCode::FileOpenFailed:
         return "FileOpenFailed";
     case ErrorCode::FileReadFailed:

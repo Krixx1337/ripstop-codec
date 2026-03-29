@@ -23,9 +23,10 @@ enum class [[nodiscard]] ErrorCode : std::uint32_t {
     CompressionFailed = 0x1000000Cu,
     DecompressionFailed = 0x1000000Du,
     CrcMismatch = 0x1000000Eu,
-    FileOpenFailed = 0x1000000Fu,
-    FileReadFailed = 0x10000010u,
-    FileWriteFailed = 0x10000011u,
+    PreFlightAbort = 0x1000000Fu,
+    FileOpenFailed = 0x10000010u,
+    FileReadFailed = 0x10000011u,
+    FileWriteFailed = 0x10000012u,
 };
 
 } // namespace ripstop::codec

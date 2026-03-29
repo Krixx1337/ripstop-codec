@@ -24,28 +24,28 @@ constexpr std::uint16_t k_known_flags_mask =
 
 template <typename T>
 [[nodiscard]] Result<T> make_error(ErrorCode error) {
-    RIPSTOP_ON_ERROR(error);
+    Security::OnError(error);
     return Result<T>{.error = error};
 }
 
 template <typename T>
 [[nodiscard]] Result<T> make_tamper_error(ErrorCode error) {
-    RIPSTOP_ON_ERROR(error);
-    RIPSTOP_ON_TAMPER();
+    Security::OnError(error);
+    Security::OnTamper(error);
     return Result<T>{.error = error};
 }
 
 [[nodiscard]] ErrorCode report_error(ErrorCode error) {
     if (error != ErrorCode::Success) {
-        RIPSTOP_ON_ERROR(error);
+        Security::OnError(error);
     }
 
     return error;
 }
 
 [[nodiscard]] ErrorCode report_tamper_error(ErrorCode error) {
-    RIPSTOP_ON_ERROR(error);
-    RIPSTOP_ON_TAMPER();
+    Security::OnError(error);
+    Security::OnTamper(error);
     return error;
 }
 
@@ -391,6 +391,9 @@ void transform_header(Header& header, const ProjectOptions& project) {
                 error != ErrorCode::Success) {
                 return error;
             }
+            if (!Security::PostDescramble(output)) {
+                return report_error(ErrorCode::PreFlightAbort);
+            }
         }
 
         if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
@@ -415,6 +418,10 @@ void transform_header(Header& header, const ProjectOptions& project) {
             error != ErrorCode::Success) {
             SecureWipe(temp_payload);
             return report_error(error);
+        }
+        if (!Security::PostDescramble(temp_payload)) {
+            SecureWipe(temp_payload);
+            return report_error(ErrorCode::PreFlightAbort);
         }
         compressed_input = temp_payload;
     }
@@ -514,6 +521,10 @@ Result<std::vector<std::uint8_t>> encode_impl(std::span<const std::uint8_t> raw_
 Result<std::vector<std::uint8_t>> decode_impl(std::span<const std::uint8_t> encoded_buffer,
                                               const ProjectOptions& project,
                                               const AssetOptions& asset) {
+    if (!Security::PreDecode(encoded_buffer)) {
+        return make_error<std::vector<std::uint8_t>>(ErrorCode::PreFlightAbort);
+    }
+
     const Result<Header> header_result = peek_header(encoded_buffer, project);
     if (!header_result) {
         return make_error<std::vector<std::uint8_t>>(header_result.error);

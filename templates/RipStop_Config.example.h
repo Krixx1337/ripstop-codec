@@ -30,20 +30,41 @@
 //     CompressionFailed = 0xA5D80E11u,
 //     DecompressionFailed = 0xD0314BB5u,
 //     CrcMismatch = 0x1C807A6Eu,
+//     PreFlightAbort = 0xAA51C9D3u,
 //     FileOpenFailed = 0x6C6E83D2u,
 //     FileReadFailed = 0x7E93C441u,
 //     FileWriteFailed = 0xCA1D7350u,
 // };
 // } // namespace ripstop::codec
 
-// 2. Security Lifecycle Hooks
-
-// #define RIPSTOP_ON_TAMPER()
-// #define RIPSTOP_ON_ERROR(code) do { (void)(code); } while (0)
-
 #include <ripstop/Codec.h>
 
 namespace ripstop_config {
+
+// 2. Security Lifecycle Hooks
+
+struct ExampleSecurityPolicy {
+    static inline bool PreDecode(std::span<const std::uint8_t> encodedData) {
+        (void)(encodedData);
+        return true;
+    }
+
+    static inline bool PostDescramble(std::span<std::uint8_t> decodedBuffer) {
+        (void)(decodedBuffer);
+        return true;
+    }
+
+    static inline void OnTamper(ripstop::codec::ErrorCode code) {
+        (void)(code);
+    }
+
+    static inline void OnError(ripstop::codec::ErrorCode code) {
+        (void)(code);
+    }
+};
+
+// Replace this with your own policy or remove it to use the built-in default behavior.
+#define RIPSTOP_SECURITY_POLICY ::ripstop_config::ExampleSecurityPolicy
 
 // You can either edit the constants in this file directly, or generate a randomized
 // project-local config with:
