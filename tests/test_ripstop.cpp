@@ -250,3 +250,19 @@ TEST_CASE("MemStream provides zero-copy istream-style reads over decoded buffers
     std::getline(stream, whole_line);
     CHECK(whole_line == text);
 }
+
+TEST_CASE("error strings are hardened numeric codes when enabled") {
+    CHECK(to_string(ErrorCode::MagicMismatch) ==
+          std::to_string(static_cast<std::uint32_t>(ErrorCode::MagicMismatch) ^
+                         static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR)));
+}
+
+TEST_CASE("secure wipe clears caller-owned buffers") {
+    std::string text = "secret";
+    SecureWipe(text);
+    CHECK(text.empty());
+
+    std::vector<std::uint8_t> bytes{1u, 2u, 3u, 4u};
+    SecureWipe(bytes);
+    CHECK(bytes.empty());
+}

@@ -1,13 +1,17 @@
 #pragma once
 
+#include <ripstop/config_bridge.h>
+#include <ripstop/detail/polymorphic_error.h>
+
 #include <cassert>
 #include <cstdint>
-#include <string_view>
+#include <string>
 #include <utility>
 
 namespace ripstop::codec {
 
-enum class [[nodiscard]] ErrorCode : std::uint8_t {
+#if !RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM
+enum class [[nodiscard]] ErrorCode : std::uint32_t {
     Success = 0,
     BufferTooSmall,
     MagicMismatch,
@@ -26,8 +30,12 @@ enum class [[nodiscard]] ErrorCode : std::uint8_t {
     FileReadFailed,
     FileWriteFailed
 };
+#endif
 
-[[nodiscard]] constexpr std::string_view to_string(ErrorCode error) noexcept {
+[[nodiscard]] inline std::string to_string(ErrorCode error) {
+#if RIPSTOP_HARDEN_ERRORS
+    return ::hostile_core::harden_error_code<ErrorCode, static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR)>(error);
+#else
     switch (error) {
     case ErrorCode::Success:
         return "Success";
@@ -66,7 +74,8 @@ enum class [[nodiscard]] ErrorCode : std::uint8_t {
     }
 
     return "UnknownError";
-};
+#endif
+}
 
 template <typename T>
 struct [[nodiscard]] Result {

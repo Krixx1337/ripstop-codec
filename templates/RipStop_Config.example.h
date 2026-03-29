@@ -1,9 +1,40 @@
 #pragma once
 
-#include <ripstop/Codec.h>
-
 #include <cstdint>
 #include <string_view>
+
+// If you enable the optional custom ErrorCode enum, define it before including <ripstop/Codec.h>.
+// That lets RipStop pick up the project-specific values during header parsing.
+
+// Optional: switch RipStop to numeric-only error output in release-style builds.
+// Leave the enum override disabled if you prefer the stock sequential values.
+// #define RIPSTOP_HAS_CUSTOM_ERROR_CODE_ENUM 1
+// #define RIPSTOP_HARDEN_ERRORS 1
+// #define RIPSTOP_ERROR_XOR 0x12345678u
+//
+// namespace ripstop::codec {
+// enum class ErrorCode : std::uint32_t {
+//     Success = 0x6A10D54Eu,
+//     BufferTooSmall = 0x61FA2E93u,
+//     MagicMismatch = 0xA20D55C1u,
+//     UnsupportedVersion = 0xF11093A2u,
+//     UnsupportedScrambleId = 0x0F63A12Cu,
+//     MissingScramblerFunc = 0x4C19A883u,
+//     InvalidFlags = 0x96F52170u,
+//     InvalidIdentityType = 0x6E82B1F4u,
+//     SizeLimitExceeded = 0xD79B5F02u,
+//     DomainMismatch = 0xE4AA1B29u,
+//     UnsupportedCompression = 0x19F30A47u,
+//     CompressionFailed = 0xA5D80E11u,
+//     DecompressionFailed = 0xD0314BB5u,
+//     CrcMismatch = 0x1C807A6Eu,
+//     FileOpenFailed = 0x6C6E83D2u,
+//     FileReadFailed = 0x7E93C441u,
+//     FileWriteFailed = 0xCA1D7350u,
+// };
+// } // namespace ripstop::codec
+
+#include <ripstop/Codec.h>
 
 namespace example::ripstop {
 

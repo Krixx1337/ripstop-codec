@@ -8,6 +8,8 @@
 
 #include <ripstop/Error.h>
 #include <ripstop/Format.h>
+#include <ripstop/detail/constexpr_obfuscation.h>
+#include <ripstop/detail/memory_hygiene.h>
 
 #include <array>
 #include <cstdint>
@@ -52,15 +54,10 @@ struct AssetOptions {
 };
 
 namespace detail {
-
-inline constexpr std::uint64_t split_mix_increment = 0x9e3779b97f4a7c15ull;
-inline constexpr std::uint64_t fnv_offset_basis = 0xcbf29ce484222325ull;
-inline constexpr std::uint64_t fnv_prime = 0x100000001b3ull;
+inline constexpr std::uint64_t split_mix_increment = ::hostile_core::split_mix_increment;
 
 [[nodiscard]] constexpr std::uint64_t mix64(std::uint64_t x) {
-    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
-    x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;
-    return x ^ (x >> 31);
+    return ::hostile_core::mix64(x);
 }
 
 template <typename T>
@@ -164,51 +161,36 @@ template <typename T>
 }
 
 namespace utils {
-
 template <std::uint64_t Secret, std::uint8_t Mask>
-struct ObfuscatedSecret {
-    std::array<std::uint8_t, sizeof(std::uint64_t)> masked_bytes{};
-
-    consteval ObfuscatedSecret() {
-        for (std::size_t i = 0; i < masked_bytes.size(); ++i) {
-            const std::uint8_t byte = static_cast<std::uint8_t>((Secret >> (i * 8)) & 0xFFu);
-            masked_bytes[i] = static_cast<std::uint8_t>(byte ^ Mask);
-        }
-    }
-
-    [[nodiscard]] std::uint64_t resolve() const noexcept {
-        volatile std::uint8_t mask = Mask;
-        std::uint64_t secret = 0;
-
-        for (std::size_t i = 0; i < masked_bytes.size(); ++i) {
-            const volatile std::uint8_t masked = masked_bytes[i];
-            secret |= static_cast<std::uint64_t>(masked ^ mask) << (i * 8);
-        }
-
-        return secret;
-    }
-};
+using ObfuscatedSecret = ::hostile_core::ObfuscatedSecret<Secret, Mask>;
 
 template <std::uint64_t Secret, std::uint8_t Mask>
 [[nodiscard]] consteval auto make_obfuscated_secret() {
-    return ObfuscatedSecret<Secret, Mask>{};
+    return ::hostile_core::make_obfuscated_secret<Secret, Mask>();
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_string(std::string_view value) {
-    std::uint64_t hash = detail::fnv_offset_basis;
-
-    for (unsigned char ch : value) {
-        hash ^= ch;
-        hash *= detail::fnv_prime;
-    }
-
-    return hash;
+    return ::hostile_core::hash_string(value);
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_uint64(std::uint64_t value) {
-    return detail::mix64(value + detail::split_mix_increment);
+    return ::hostile_core::hash_uint64(value);
 }
 
 } // namespace utils
+
+inline void SecureWipe(std::string& value) noexcept {
+    ::hostile_core::secure_wipe(value);
+}
+
+template <typename T>
+inline void SecureWipe(std::vector<T>& value) noexcept {
+    ::hostile_core::secure_wipe(value);
+}
+
+template <typename T>
+inline void SecureWipe(std::span<T> value) noexcept {
+    ::hostile_core::secure_wipe(value);
+}
 
 } // namespace ripstop::codec

@@ -19,6 +19,22 @@ project(
 include(GNUInstallDirs)
 include(CTest)
 
+set(RIPSTOP_USER_CONFIG_HEADER "" CACHE STRING "Optional project-specific RipStop config header")
+set(RIPSTOP_USER_CONFIG_INCLUDE_DIR "" CACHE PATH "Optional include directory for the project-specific RipStop config header during build-tree usage")
+
+if(BUILD_TESTING AND NOT RIPSTOP_USER_CONFIG_HEADER)
+  set(RIPSTOP_USER_CONFIG_HEADER "RipStop_TestConfig.h")
+  set(RIPSTOP_USER_CONFIG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+endif()
+
+if(RIPSTOP_USER_CONFIG_HEADER)
+  if(RIPSTOP_USER_CONFIG_HEADER MATCHES "^[<\"].*[>\"]$")
+    set(RIPSTOP_USER_CONFIG_HEADER_LITERAL "${RIPSTOP_USER_CONFIG_HEADER}")
+  else()
+    set(RIPSTOP_USER_CONFIG_HEADER_LITERAL "\"${RIPSTOP_USER_CONFIG_HEADER}\"")
+  endif()
+endif()
+
 add_library(ripstop-codec STATIC)
 add_library(RipStopCodec::ripstop-codec ALIAS ripstop-codec)
 
@@ -33,9 +49,13 @@ target_sources(
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
     FILES
       include/ripstop/Codec.h
+      include/ripstop/config_bridge.h
       include/ripstop/Error.h
       include/ripstop/Format.h
       include/ripstop/MemStream.h
+      include/ripstop/detail/constexpr_obfuscation.h
+      include/ripstop/detail/memory_hygiene.h
+      include/ripstop/detail/polymorphic_error.h
 )
 
 target_include_directories(
@@ -47,7 +67,24 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
+if(RIPSTOP_USER_CONFIG_INCLUDE_DIR)
+  target_include_directories(
+    ripstop-codec
+    PUBLIC
+      $<BUILD_INTERFACE:${RIPSTOP_USER_CONFIG_INCLUDE_DIR}>
+  )
+endif()
+
 target_compile_features(ripstop-codec PUBLIC cxx_std_20)
+
+if(RIPSTOP_USER_CONFIG_HEADER)
+  target_compile_definitions(
+    ripstop-codec
+    PUBLIC
+      RIPSTOP_USER_CONFIG_HEADER=${RIPSTOP_USER_CONFIG_HEADER_LITERAL}
+  )
+endif()
+
 target_compile_definitions(
   ripstop-codec
   PRIVATE

@@ -391,6 +391,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
         temp_payload.assign(payload.begin(), payload.end());
         if (const ErrorCode error = transform_in_place(temp_payload, project, asset, header);
             error != ErrorCode::Success) {
+            SecureWipe(temp_payload);
             return error;
         }
         compressed_input = temp_payload;
@@ -398,13 +399,16 @@ void transform_header(Header& header, const ProjectOptions& project) {
 
     if (const ErrorCode decompress_error = decompress_payload(compressed_input, output, compression);
         decompress_error != ErrorCode::Success) {
+        SecureWipe(temp_payload);
         return decompress_error;
     }
 
     if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
+        SecureWipe(temp_payload);
         return ErrorCode::CrcMismatch;
     }
 
+    SecureWipe(temp_payload);
     return ErrorCode::Success;
 }
 
@@ -510,7 +514,9 @@ Result<std::string> decode_to_string(std::span<const std::uint8_t> encoded_buffe
         return make_error<std::string>(decoded.error);
     }
 
-    return Result<std::string>{std::string(reinterpret_cast<const char*>(decoded.value.data()), decoded.value.size())};
+    std::string text(reinterpret_cast<const char*>(decoded.value.data()), decoded.value.size());
+    SecureWipe(decoded.value);
+    return Result<std::string>{std::move(text)};
 }
 
 ErrorCode encode_file(const std::filesystem::path& input_path,
@@ -523,6 +529,7 @@ ErrorCode encode_file(const std::filesystem::path& input_path,
     }
 
     Result<std::vector<std::uint8_t>> encoded = encode_impl(input.value, project, asset);
+    SecureWipe(input.value);
     if (!encoded) {
         return encoded.error;
     }
@@ -540,11 +547,14 @@ ErrorCode decode_file(const std::filesystem::path& input_path,
     }
 
     Result<std::vector<std::uint8_t>> decoded = decode_impl(input.value, project, asset);
+    SecureWipe(input.value);
     if (!decoded) {
         return decoded.error;
     }
 
-    return write_file_bytes(output_path, decoded.value);
+    const ErrorCode write_error = write_file_bytes(output_path, decoded.value);
+    SecureWipe(decoded.value);
+    return write_error;
 }
 
 ErrorCode decode_into(std::span<const std::uint8_t> encoded_buffer,
