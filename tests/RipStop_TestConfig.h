@@ -1,27 +1,27 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <span>
 
 #define RIPSTOP_HARDEN_ERRORS 1
 
 namespace ripstop::codec {
-struct TestSecurityPolicy {
-    static inline bool PreDecode(std::span<const std::uint8_t>) {
+class TestSecurityPolicy final : public ISecurityPolicy {
+public:
+    bool PreDecode(std::span<const std::uint8_t>) const override {
         return true;
     }
 
-    static inline void OnScrambleState(std::uint64_t&) {}
+    void OnScrambleState(std::uint64_t&) const override {}
 
-    static inline bool PostDescramble(std::span<std::uint8_t>) {
+    bool PostDescramble(std::span<std::uint8_t>) const override {
         return true;
     }
 
-    static inline void OnTamper(ErrorCode) {}
+    void OnTamper(ErrorCode) const override {}
 
-    static inline void OnError(ErrorCode) {}
+    void OnError(ErrorCode) const override {}
 };
 
 } // namespace ripstop::codec
-
-#define RIPSTOP_SECURITY_POLICY ::ripstop::codec::TestSecurityPolicy

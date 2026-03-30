@@ -14,6 +14,12 @@
 
 namespace ripstop::codec {
 
+namespace detail {
+
+std::uint32_t ErrorXorKey() noexcept;
+
+} // namespace detail
+
 enum class ErrorCode : std::uint32_t {
     Success = 0,
     BufferTooSmall,

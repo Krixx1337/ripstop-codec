@@ -1,12 +1,33 @@
 #pragma once
 
 #include <cstdlib>
+#include <memory>
 #include <string>
 #include <span>
 #include <cstdint>
 
 namespace ripstop::codec {
 enum class ErrorCode : std::uint32_t;
+
+class ISecurityPolicy {
+public:
+    virtual ~ISecurityPolicy() = default;
+    virtual bool PreDecode(std::span<const std::uint8_t> encoded_data) const {
+        (void)encoded_data;
+        return true;
+    }
+    virtual void OnScrambleState(std::uint64_t& state) const {
+        (void)state;
+    }
+    virtual bool PostDescramble(std::span<std::uint8_t> decoded_buffer) const {
+        (void)decoded_buffer;
+        return true;
+    }
+    virtual void OnTamper(ErrorCode code) const = 0;
+    virtual void OnError(ErrorCode code) const {
+        (void)code;
+    }
+};
 } // namespace ripstop::codec
 
 // Optional project-local config injection, similar to BurnerNet.
@@ -20,35 +41,28 @@ enum class ErrorCode : std::uint32_t;
 
 namespace ripstop::codec::detail {
 
-struct DefaultSecurity {
-    static inline bool PreDecode(std::span<const std::uint8_t>) {
+class DefaultSecurityPolicy final : public ISecurityPolicy {
+public:
+    bool PreDecode(std::span<const std::uint8_t>) const override {
         return true;
     }
 
-    static inline void OnScrambleState(std::uint64_t&) {}
+    void OnScrambleState(std::uint64_t&) const override {}
 
-    static inline bool PostDescramble(std::span<std::uint8_t>) {
+    bool PostDescramble(std::span<std::uint8_t>) const override {
         return true;
     }
 
-    static inline void OnTamper(ErrorCode code) {
+    void OnTamper(ErrorCode code) const override {
         (void)(code);
         std::abort();
     }
 
-    static inline void OnError(ErrorCode code) {
+    void OnError(ErrorCode code) const override {
         (void)(code);
     }
 };
 
-} // namespace ripstop::codec::detail
+std::shared_ptr<ISecurityPolicy> ResolveSecurityPolicy(std::shared_ptr<ISecurityPolicy> policy);
 
-#ifndef RIPSTOP_SECURITY_POLICY
-namespace ripstop::codec {
-using Security = detail::DefaultSecurity;
-}
-#else
-namespace ripstop::codec {
-using Security = RIPSTOP_SECURITY_POLICY;
-}
-#endif
+} // namespace ripstop::codec::detail

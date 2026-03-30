@@ -21,6 +21,7 @@ ProjectOptions make_project() {
         .magic = 0x474E5089u,
         .domain_id = 0xDEADBEEFu,
         .project_secret = 0x0123456789ABCDEFull,
+        .policy = std::make_shared<TestSecurityPolicy>(),
     };
 }
 
@@ -253,7 +254,8 @@ TEST_CASE("MemStream provides zero-copy istream-style reads over decoded buffers
 
 TEST_CASE("error strings are hardened numeric codes when enabled") {
     CHECK(to_string(ErrorCode::MagicMismatch) ==
-          std::to_string(static_cast<std::uint32_t>(ErrorCode::MagicMismatch)));
+          std::to_string(static_cast<std::uint32_t>(ErrorCode::MagicMismatch) ^
+                         detail::ErrorXorKey()));
 }
 
 TEST_CASE("secure wipe clears caller-owned buffers") {

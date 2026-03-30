@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <string_view>
 
 // 1. Error Output
@@ -14,32 +15,30 @@ namespace ripstop_config {
 
 // 2. Security Lifecycle Hooks
 
-struct ExampleSecurityPolicy {
-    static inline bool PreDecode(std::span<const std::uint8_t> encodedData) {
+class ExampleSecurityPolicy final : public ripstop::codec::ISecurityPolicy {
+public:
+    bool PreDecode(std::span<const std::uint8_t> encodedData) const override {
         (void)(encodedData);
         return true;
     }
 
-    static inline void OnScrambleState(std::uint64_t& state) {
+    void OnScrambleState(std::uint64_t& state) const override {
         (void)(state);
     }
 
-    static inline bool PostDescramble(std::span<std::uint8_t> decodedBuffer) {
+    bool PostDescramble(std::span<std::uint8_t> decodedBuffer) const override {
         (void)(decodedBuffer);
         return true;
     }
 
-    static inline void OnTamper(ripstop::codec::ErrorCode code) {
+    void OnTamper(ripstop::codec::ErrorCode code) const override {
         (void)(code);
     }
 
-    static inline void OnError(ripstop::codec::ErrorCode code) {
+    void OnError(ripstop::codec::ErrorCode code) const override {
         (void)(code);
     }
 };
-
-// Replace this with your own policy or remove it to use the built-in default behavior.
-#define RIPSTOP_SECURITY_POLICY ::ripstop_config::ExampleSecurityPolicy
 
 // You can either edit the constants in this file directly, or generate a randomized
 // project-local config with:
@@ -118,6 +117,7 @@ inline ripstop::codec::ProjectOptions MakeProjectOptions() {
         .project_secret = kProjectSecret.resolve(),
         .scramble_id = 100,
         .scrambler = my_custom_scrambler,
+        .policy = std::make_shared<ExampleSecurityPolicy>(),
     };
 }
 

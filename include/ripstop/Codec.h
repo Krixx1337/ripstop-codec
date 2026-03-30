@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <span>
 #include <string_view>
@@ -43,6 +44,7 @@ struct ProjectOptions {
     std::uint64_t project_secret = 0;
     std::uint8_t scramble_id = Header::ScrambleSplitMix64;
     ScramblerFunc scrambler = nullptr;
+    std::shared_ptr<ISecurityPolicy> policy;
 };
 
 struct AssetOptions {

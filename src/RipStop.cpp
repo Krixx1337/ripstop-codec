@@ -13,7 +13,29 @@ extern "C" {
 }
 
 namespace ripstop::codec {
+namespace detail {
+
+std::uint32_t ErrorXorKey() noexcept {
+    static constinit const std::uint32_t key = ::HOSTILE_CORE_NAMESPACE::build_error_xor_key();
+    return key;
+}
+
+std::shared_ptr<ISecurityPolicy> ResolveSecurityPolicy(std::shared_ptr<ISecurityPolicy> policy) {
+    if (policy) {
+        return policy;
+    }
+
+    static std::shared_ptr<ISecurityPolicy> default_policy = std::make_shared<DefaultSecurityPolicy>();
+    return default_policy;
+}
+
+} // namespace detail
+
 namespace {
+
+const ISecurityPolicy& SecurityPolicy(const ProjectOptions& project) {
+    return *detail::ResolveSecurityPolicy(project.policy);
+}
 
 static_assert(std::endian::native == std::endian::little,
               "RipStop Codec currently requires a little-endian architecture.");
@@ -24,28 +46,27 @@ constexpr std::uint16_t k_known_flags_mask =
 
 template <typename T>
 [[nodiscard]] Result<T> make_error(ErrorCode error) {
-    Security::OnError(error);
     return Result<T>{.error = error};
 }
 
 template <typename T>
-[[nodiscard]] Result<T> make_tamper_error(ErrorCode error) {
-    Security::OnError(error);
-    Security::OnTamper(error);
+[[nodiscard]] Result<T> make_tamper_error(ErrorCode error, const ProjectOptions& project) {
+    SecurityPolicy(project).OnError(error);
+    SecurityPolicy(project).OnTamper(error);
     return Result<T>{.error = error};
 }
 
-[[nodiscard]] ErrorCode report_error(ErrorCode error) {
+[[nodiscard]] ErrorCode report_error(ErrorCode error, const ProjectOptions& project) {
     if (error != ErrorCode::Success) {
-        Security::OnError(error);
+        SecurityPolicy(project).OnError(error);
     }
 
     return error;
 }
 
-[[nodiscard]] ErrorCode report_tamper_error(ErrorCode error) {
-    Security::OnError(error);
-    Security::OnTamper(error);
+[[nodiscard]] ErrorCode report_tamper_error(ErrorCode error, const ProjectOptions& project) {
+    SecurityPolicy(project).OnError(error);
+    SecurityPolicy(project).OnTamper(error);
     return error;
 }
 
@@ -53,7 +74,7 @@ template <typename T>
 
 std::string to_string(ErrorCode error) {
 #if RIPSTOP_HARDEN_ERRORS
-    return ::HOSTILE_CORE_NAMESPACE::harden_error_code(error, 0u);
+    return ::HOSTILE_CORE_NAMESPACE::harden_error_code(error, detail::ErrorXorKey());
 #else
     switch (error) {
     case ErrorCode::Success: return "Success";
@@ -272,7 +293,7 @@ void default_scrambler(std::span<std::uint8_t> buffer, std::uint64_t state, cons
         state ^= utils::hash_string(asset.password);
     }
 
-    Security::OnScrambleState(state);
+    SecurityPolicy(project).OnScrambleState(state);
     return mix64(state);
 }
 
@@ -309,7 +330,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
     transform_header(header, project);
 
     if (header.magic != project.magic) {
-        return make_tamper_error<Header>(ErrorCode::MagicMismatch);
+        return make_tamper_error<Header>(ErrorCode::MagicMismatch, project);
     }
 
     if (header.codec_version > Header::CodecVersion) {
@@ -417,7 +438,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
     if (compression == CompressionType::None) {
         const ErrorCode decompress_error = decompress_payload(payload, output, compression);
         if (decompress_error != ErrorCode::Success) {
-            return report_error(decompress_error);
+            return report_error(decompress_error, project);
         }
 
         if (has_flag(header.flags, HeaderFlags::Scrambled)) {
@@ -425,13 +446,13 @@ void transform_header(Header& header, const ProjectOptions& project) {
                 error != ErrorCode::Success) {
                 return error;
             }
-            if (!Security::PostDescramble(output)) {
-                return report_error(ErrorCode::PreFlightAbort);
+            if (!SecurityPolicy(project).PostDescramble(output)) {
+                return report_error(ErrorCode::PreFlightAbort, project);
             }
         }
 
         if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
-            return report_tamper_error(ErrorCode::CrcMismatch);
+            return report_tamper_error(ErrorCode::CrcMismatch, project);
         }
 
         return ErrorCode::Success;
@@ -451,11 +472,11 @@ void transform_header(Header& header, const ProjectOptions& project) {
         if (const ErrorCode error = transform_in_place(temp_payload, project, asset, header);
             error != ErrorCode::Success) {
             SecureWipe(temp_payload);
-            return report_error(error);
+            return report_error(error, project);
         }
-        if (!Security::PostDescramble(temp_payload)) {
+        if (!SecurityPolicy(project).PostDescramble(temp_payload)) {
             SecureWipe(temp_payload);
-            return report_error(ErrorCode::PreFlightAbort);
+            return report_error(ErrorCode::PreFlightAbort, project);
         }
         compressed_input = temp_payload;
     }
@@ -463,12 +484,12 @@ void transform_header(Header& header, const ProjectOptions& project) {
     if (const ErrorCode decompress_error = decompress_payload(compressed_input, output, compression);
         decompress_error != ErrorCode::Success) {
         SecureWipe(temp_payload);
-        return report_error(decompress_error);
+        return report_error(decompress_error, project);
     }
 
     if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
         SecureWipe(temp_payload);
-        return report_tamper_error(ErrorCode::CrcMismatch);
+        return report_tamper_error(ErrorCode::CrcMismatch, project);
     }
 
     SecureWipe(temp_payload);
@@ -555,7 +576,8 @@ Result<std::vector<std::uint8_t>> encode_impl(std::span<const std::uint8_t> raw_
 Result<std::vector<std::uint8_t>> decode_impl(std::span<const std::uint8_t> encoded_buffer,
                                               const ProjectOptions& project,
                                               const AssetOptions& asset) {
-    if (!Security::PreDecode(encoded_buffer)) {
+    if (!SecurityPolicy(project).PreDecode(encoded_buffer)) {
+        SecurityPolicy(project).OnError(ErrorCode::PreFlightAbort);
         return make_error<std::vector<std::uint8_t>>(ErrorCode::PreFlightAbort);
     }
 
@@ -635,7 +657,7 @@ ErrorCode decode_into(std::span<const std::uint8_t> encoded_buffer,
 
     const Header& header = header_result.value;
     if (header.domain_id != project.domain_id) {
-        return report_tamper_error(ErrorCode::DomainMismatch);
+        return report_tamper_error(ErrorCode::DomainMismatch, project);
     }
 
     const std::span<const std::uint8_t> payload = encoded_buffer.subspan(header.header_size);
