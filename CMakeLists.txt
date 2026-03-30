@@ -41,7 +41,6 @@ add_library(RipStopCodec::ripstop-codec ALIAS ripstop-codec)
 target_sources(
   ripstop-codec
   PRIVATE
-    src/detail/memory_hygiene.cpp
     src/RipStop.cpp
     third_party/miniz/miniz.c
   PUBLIC

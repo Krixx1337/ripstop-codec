@@ -67,8 +67,8 @@ Its purpose is practical asset protection and file hardening, not strong secrecy
 ## Quick Start
 
 Recommended integration order:
-- Default: source-drop into your project or engine build
-- Secondary: static library via CMake
+- Default: static library via CMake
+- Supported fallback: source-drop into your project or engine build
 - Usually unnecessary: dynamic/shared packaging
 
 ### 1. Create a project-local config
@@ -218,7 +218,7 @@ Or link the alias target:
 target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
 ```
 
-For manual integration without CMake, add `include/` and `third_party/` to your include paths, then compile `src/RipStop.cpp` and `third_party/miniz/miniz.c` as part of your project. The full setup is documented in [INSTALL.md](./INSTALL.md).
+For manual integration without CMake, add `include/` and `third_party/` to your include paths, then compile the implementation sources documented in [INSTALL.md](./INSTALL.md). `CMakeLists.txt` is the source of truth for the current build definition.
 
 ## More
 
