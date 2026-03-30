@@ -40,7 +40,11 @@ public:
 #endif
 
 #ifndef RIPSTOP_HARDEN_ERRORS
+#if defined(RIPSTOP_LEAK_STRINGS_FOR_DEBUGGING) || defined(RIPSTOP_DEBUG_LEAK_ENUM_STRINGS)
 #define RIPSTOP_HARDEN_ERRORS 0
+#else
+#define RIPSTOP_HARDEN_ERRORS 1
+#endif
 #endif
 
 namespace ripstop::codec::detail {

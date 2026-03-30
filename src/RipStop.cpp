@@ -17,7 +17,7 @@ namespace detail {
 
 std::uint32_t ErrorXorKey() noexcept {
     static constinit const std::uint32_t key =
-        ::HOSTILE_CORE_NAMESPACE::build_error_xor_key() ^ static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR);
+        ::ripstop::codec::obf::build_error_xor_key() ^ static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR);
     return key;
 }
 
@@ -75,7 +75,7 @@ template <typename T>
 
 std::string to_string(ErrorCode error) {
 #if RIPSTOP_HARDEN_ERRORS
-    return ::HOSTILE_CORE_NAMESPACE::harden_error_code(error, detail::ErrorXorKey());
+    return ::ripstop::codec::obf::harden_error_code(error, detail::ErrorXorKey());
 #else
     switch (error) {
     case ErrorCode::Success: return "Success";

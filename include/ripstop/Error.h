@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef HOSTILE_CORE_NAMESPACE
-#define HOSTILE_CORE_NAMESPACE ripstop_hostile
-#endif
-
 #include <ripstop/config_bridge.h>
 #include <ripstop/detail/polymorphic_error.h>
 

@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef HOSTILE_CORE_NAMESPACE
-#define HOSTILE_CORE_NAMESPACE ripstop_hostile
-#endif
-
 #define RIPSTOP_CODEC_VERSION_MAJOR 1
 #define RIPSTOP_CODEC_VERSION_MINOR 0
 #define RIPSTOP_CODEC_VERSION_PATCH 1
@@ -47,6 +43,12 @@ struct ProjectOptions {
     std::shared_ptr<ISecurityPolicy> policy;
 };
 
+struct ProjectIdentity {
+    std::uint32_t magic;
+    std::uint32_t domain_id;
+    std::uint64_t project_secret;
+};
+
 struct AssetOptions {
     std::uint64_t format_tag = 0;
     std::uint64_t context_seed = 0;
@@ -60,10 +62,10 @@ struct AssetOptions {
 };
 
 namespace detail {
-inline constexpr std::uint64_t split_mix_increment = ::HOSTILE_CORE_NAMESPACE::split_mix_increment;
+inline constexpr std::uint64_t split_mix_increment = ::ripstop::codec::obf::split_mix_increment;
 
 [[nodiscard]] constexpr std::uint64_t mix64(std::uint64_t x) {
-    return ::HOSTILE_CORE_NAMESPACE::mix64(x);
+    return ::ripstop::codec::obf::mix64(x);
 }
 
 template <typename T>
@@ -168,35 +170,57 @@ template <typename T>
 
 namespace utils {
 template <std::uint64_t Secret, std::uint8_t Mask>
-using ObfuscatedSecret = ::HOSTILE_CORE_NAMESPACE::ObfuscatedSecret<Secret, Mask>;
+using ObfuscatedSecret = ::ripstop::codec::obf::ObfuscatedSecret<Secret, Mask>;
 
 template <std::uint64_t Secret, std::uint8_t Mask>
 [[nodiscard]] consteval auto make_obfuscated_secret() {
-    return ::HOSTILE_CORE_NAMESPACE::make_obfuscated_secret<Secret, Mask>();
+    return ::ripstop::codec::obf::make_obfuscated_secret<Secret, Mask>();
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_string(std::string_view value) {
-    return ::HOSTILE_CORE_NAMESPACE::hash_string(value);
+    return ::ripstop::codec::obf::hash_string(value);
+}
+
+[[nodiscard]] inline constexpr std::uint64_t hash_string(std::string_view value, std::string_view salt) {
+    return ::ripstop::codec::obf::hash_string_pair(value, salt);
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_uint64(std::uint64_t value) {
-    return ::HOSTILE_CORE_NAMESPACE::hash_uint64(value);
+    return ::ripstop::codec::obf::hash_uint64(value);
+}
+
+[[nodiscard]] inline constexpr std::uint32_t hash_string_32(std::string_view value) {
+    const std::uint64_t hash = hash_string(value);
+    return static_cast<std::uint32_t>(hash ^ (hash >> 32));
+}
+
+[[nodiscard]] inline constexpr std::uint32_t hash_string_32(std::string_view value, std::string_view salt) {
+    const std::uint64_t hash = hash_string(value, salt);
+    return static_cast<std::uint32_t>(hash ^ (hash >> 32));
 }
 
 } // namespace utils
 
+[[nodiscard]] consteval ProjectIdentity GenerateIdentity(std::string_view seed) noexcept {
+    return ProjectIdentity{
+        .magic = utils::hash_string_32(seed, "magic"),
+        .domain_id = utils::hash_string_32(seed, "domain"),
+        .project_secret = utils::hash_string(seed, "secret"),
+    };
+}
+
 inline void SecureWipe(std::string& value) noexcept {
-    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
+    ::ripstop::codec::obf::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::vector<T>& value) noexcept {
-    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
+    ::ripstop::codec::obf::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::span<T> value) noexcept {
-    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
+    ::ripstop::codec::obf::secure_wipe(value);
 }
 
 } // namespace ripstop::codec

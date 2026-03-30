@@ -43,17 +43,14 @@ Notes:
 
 ## Generating your Project Config
 
-Generate a randomized project-local config header with:
+The default path is:
 
-```bash
-python tools/generate_config.py
-```
+1. Copy [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h) into your project as `RipStop_Config.h`.
+2. Change `kProjectSeed` to a project-unique string.
 
-By default this writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.
+The template derives project-owned `magic`, `domain_id`, tags, and an obfuscated project secret at compile time, so manual source-drop integrations do not need a separate preprocessing step.
 
-The generated header now includes project-owned identity constants, a project-local `RIPSTOP_ERROR_XOR`, an obfuscated project secret, and helper builders for `ProjectOptions` and `AssetOptions`.
-
-If you prefer to edit a checked-in template manually, start from [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h). It uses `ripstop::codec::utils::make_obfuscated_secret<...>()`, and `MakeProjectOptions()` resolves the secret at runtime with `.resolve()`.
+If you prefer randomized constants, `python tools/generate_config.py` is still available as a power-user path. By default it writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.
 
 ## Technical Notes
 

@@ -93,8 +93,6 @@ target_compile_definitions(
     HOSTILE_CORE_EXPORT=
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
-  PUBLIC
-    HOSTILE_CORE_NAMESPACE=ripstop_hostile
 )
 
 set_target_properties(

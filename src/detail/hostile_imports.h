@@ -12,7 +12,7 @@
 #include <windows.h>
 #endif
 
-namespace HOSTILE_CORE_NAMESPACE {
+namespace ripstop::codec::obf {
 
 template <typename TFn>
 inline TFn resolve_import(std::string dll_name, std::string function_name) {
@@ -37,7 +37,7 @@ inline TFn resolve_import(std::string dll_name, std::string function_name) {
 #endif
 }
 
-} // namespace HOSTILE_CORE_NAMESPACE
+} // namespace ripstop::codec::obf
 
 #define RIPSTOP_HOSTILE_IMPORT(FnType, dll_lit, func_lit) \
-    ::HOSTILE_CORE_NAMESPACE::resolve_import<FnType>(RIPSTOP_OBF_LITERAL(dll_lit), RIPSTOP_OBF_LITERAL(func_lit))
+    ::ripstop::codec::obf::resolve_import<FnType>(RIPSTOP_OBF_LITERAL(dll_lit), RIPSTOP_OBF_LITERAL(func_lit))

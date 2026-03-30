@@ -6,9 +6,9 @@
 
 // 1. Error Output
 
-// Optional: switch RipStop to numeric-only error output in release-style builds.
+// RipStop hardens error strings by default.
 // #define RIPSTOP_ERROR_XOR 0x12345678u
-// #define RIPSTOP_HARDEN_ERRORS 1
+// #define RIPSTOP_LEAK_STRINGS_FOR_DEBUGGING 1
 
 #include <ripstop/Codec.h>
 
@@ -41,12 +41,10 @@ public:
     }
 };
 
-// You can either edit the constants in this file directly, or generate a randomized
-// project-local config with:
-//   python tools/generate_config.py
-//
-// Copy this file into your application codebase, rename it to RipStop_Config.h,
-// and replace all placeholder values with project-owned constants.
+// Dev No Think path:
+// 1. Copy this file into your application codebase.
+// 2. Rename it to RipStop_Config.h.
+// 3. Change kProjectSeed to a project-unique string.
 //
 // Rotation guidance:
 // - Changing ripstopDomainId invalidates every previously protected asset for this project.
@@ -58,27 +56,25 @@ public:
 
 // 2. Asset Identity & Policy
 
-// Project/domain identifier.
-// MUST be replaced for your project.
-inline constexpr std::uint32_t ripstopDomainId = 0x52505354u; // Example: 'RPST'
+inline constexpr std::string_view kProjectSeed = "ChangeMe_To_Something_Unique";
+inline constexpr auto kProjectIdentity = ripstop::codec::GenerateIdentity(kProjectSeed);
 
-// Project-specific file marker.
-// MUST be replaced for your project. This can mimic another container or be any private value.
-inline constexpr std::uint32_t ripstopMagic = 0x54535052u; // Example: 'RPST'
+// Project/domain identifier and file marker are derived from the seed string.
+inline constexpr std::uint32_t ripstopDomainId = kProjectIdentity.domain_id;
+inline constexpr std::uint32_t ripstopMagic = kProjectIdentity.magic;
 
 // Caller-owned payload version policy.
 inline constexpr std::uint16_t kDefaultAssetVersion = 1u;
 
-// Asset-class tags.
-// MUST be replaced with project-owned values.
-inline constexpr std::uint64_t tagPrimaryAsset = 0x1111111122222222ull;
-inline constexpr std::uint64_t tagSecondaryAsset = 0x3333333344444444ull;
+// Asset-class tags are also derived from the same seed to avoid copy-pasted defaults.
+inline constexpr std::uint64_t tagPrimaryAsset = ripstop::codec::utils::hash_string(kProjectSeed, "tag:primary");
+inline constexpr std::uint64_t tagSecondaryAsset = ripstop::codec::utils::hash_string(kProjectSeed, "tag:secondary");
 
 // 3. Project Secret
 
 // The compiler stores the masked bytes. `.resolve()` unmasks the 64-bit secret at runtime.
 inline constexpr auto kProjectSecret =
-    ripstop::codec::utils::make_obfuscated_secret<0x123456789ABCDEF0ull, 0x5Cu>();
+    ripstop::codec::utils::make_obfuscated_secret<kProjectIdentity.project_secret, 0x5Cu>();
 
 // Optional deterministic helpers for caller-owned context derivation.
 inline constexpr std::uint64_t HashContextString(std::string_view value) {

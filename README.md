@@ -66,18 +66,11 @@ Its purpose is practical asset protection and file hardening, not strong secrecy
 
 ## Quick Start
 
-### 1. Generate a project-local config
+### 1. Create a project-local config
 
-```bash
-python path/to/ripstop-codec/tools/generate_config.py
-```
+Start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h), copy it into your project as `RipStop_Config.h`, and change `kProjectSeed` to a project-unique string. The template derives `magic`, `domain_id`, tags, and the project secret from that seed at compile time.
 
-The generated header now includes:
-- project-owned `magic`, `domain_id`, tags, and secret material
-- project-local `RIPSTOP_ERROR_XOR` to further diversify hardened numeric error IDs
-- helper functions for `MakeProjectOptions()` and `MakeAssetOptions()`
-
-If you prefer to check in a template and edit constants manually, start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h).
+The Python generator is optional. If you want randomized constants instead of deterministic seed derivation, `python path/to/ripstop-codec/tools/generate_config.py` is still available as a power-user path.
 
 ### 2. Encode assets or proprietary data into your private format
 

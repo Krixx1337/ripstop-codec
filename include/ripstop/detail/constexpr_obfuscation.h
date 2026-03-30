@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace HOSTILE_CORE_NAMESPACE {
+namespace ripstop::codec::obf {
 
 inline constexpr std::uint64_t split_mix_increment = 0x9e3779b97f4a7c15ull;
 inline constexpr std::uint64_t fnv_offset_basis = 0xcbf29ce484222325ull;
@@ -26,6 +26,19 @@ inline constexpr std::uint64_t fnv_prime = 0x100000001b3ull;
 [[nodiscard]] constexpr std::uint64_t hash_string(std::string_view value) noexcept {
     std::uint64_t hash = fnv_offset_basis;
     for (unsigned char ch : value) {
+        hash ^= ch;
+        hash *= fnv_prime;
+    }
+    return hash;
+}
+
+[[nodiscard]] constexpr std::uint64_t hash_string_pair(std::string_view first, std::string_view second) noexcept {
+    std::uint64_t hash = fnv_offset_basis;
+    for (unsigned char ch : first) {
+        hash ^= ch;
+        hash *= fnv_prime;
+    }
+    for (unsigned char ch : second) {
         hash ^= ch;
         hash *= fnv_prime;
     }
@@ -106,9 +119,9 @@ struct ObfuscatedString {
     }
 };
 
-} // namespace HOSTILE_CORE_NAMESPACE
+} // namespace ripstop::codec::obf
 
 #define RIPSTOP_OBF_LITERAL(str)                                                                           \
-    ::HOSTILE_CORE_NAMESPACE::ObfuscatedString<sizeof(str), static_cast<std::uint8_t>((__LINE__ ^ __COUNTER__ \
-                                                                                         ^ __TIME__[7])        \
-                                                                                        & 0xFFu)>{str}.resolve()
+    ::ripstop::codec::obf::ObfuscatedString<sizeof(str), static_cast<std::uint8_t>((__LINE__ ^ __COUNTER__ \
+                                                                                     ^ __TIME__[7])        \
+                                                                                    & 0xFFu)>{str}.resolve()
