@@ -1,13 +1,34 @@
 # RipStop Codec Integration Guide
 
-`RipStop Codec` is a C++20 static library. This document covers the two supported integration paths for open-source and in-house projects:
+`RipStop Codec` is a C++20 static library. This document covers the two supported integration paths for open-source and in-house projects.
 
-1. CMake integration
-2. manual source integration without CMake
+Recommended order:
+
+1. manual source integration without CMake
+2. CMake integration
 
 `ProjectOptions` is intentionally project-owned input. In particular, `magic` does not have a library default, so each integration supplies its own file marker instead of inheriting a shared global signature.
 
-## For CMake Projects
+## Default: Manual Source Integration
+
+Use this when your project does not use CMake and you want to compile the codec directly inside an existing build system such as a Visual Studio solution, custom game build pipeline, or another native project format.
+
+This is the recommended default for RipStop because the library is self-contained, easy to vendor, and does not require a separate packaging step.
+
+1. Add `include/` to your project's include directories.
+2. Add `third_party/` to your project's include directories.
+3. Add `src/RipStop.cpp` to your project's source files.
+4. Add `third_party/miniz/miniz.c` to your project's source files and compile it with `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`.
+5. Build the project as C++20 or newer.
+
+Notes:
+
+- `src/RipStop.cpp` is C++ and must be compiled with C++20 support.
+- `third_party/miniz/miniz.c` is C and is bundled as the codec's compression backend.
+- `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1` keeps the bundled `miniz` private so it does not collide with another linked `zlib` or `miniz`.
+- No Visual Studio `.props` files are required. The repository keeps the integration surface intentionally small so the same instructions work across build systems.
+
+## Secondary: CMake Integration
 
 Add the library as a subdirectory and link the CMake target:
 
@@ -23,23 +44,6 @@ target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
 ```
 
 This path automatically carries the public headers, the private third-party include path used by the codec implementation, and the C++20 requirement through the target definition in `CMakeLists.txt`.
-
-## Manual Source Integration
-
-Use this when your project does not use CMake and you want to compile the codec directly inside an existing build system such as a Visual Studio solution, custom game build pipeline, or another native project format.
-
-1. Add `include/` to your project's include directories.
-2. Add `third_party/` to your project's include directories.
-3. Add `src/RipStop.cpp` to your project's source files.
-4. Add `third_party/miniz/miniz.c` to your project's source files and compile it with `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`.
-5. Build the project as C++20 or newer.
-
-Notes:
-
-- `src/RipStop.cpp` is C++ and must be compiled with C++20 support.
-- `third_party/miniz/miniz.c` is C and is bundled as the codec's compression backend.
-- `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1` keeps the bundled `miniz` private so it does not collide with another linked `zlib` or `miniz`.
-- No Visual Studio `.props` files are required. The repository keeps the integration surface intentionally small so the same instructions work across build systems.
 
 ## Generating your Project Config
 

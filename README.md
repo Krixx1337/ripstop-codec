@@ -66,6 +66,11 @@ Its purpose is practical asset protection and file hardening, not strong secrecy
 
 ## Quick Start
 
+Recommended integration order:
+- Default: source-drop into your project or engine build
+- Secondary: static library via CMake
+- Usually unnecessary: dynamic/shared packaging
+
 ### 1. Create a project-local config
 
 Start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h), copy it into your project as `RipStop_Config.h`, and change `kProjectSeed` to a project-unique string. The template derives `magic`, `domain_id`, tags, and the project secret from that seed at compile time.
