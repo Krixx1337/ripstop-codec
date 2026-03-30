@@ -51,7 +51,7 @@ python tools/generate_config.py
 
 By default this writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.
 
-The generated header now includes project-owned identity constants, an obfuscated project secret, and helper builders for `ProjectOptions` and `AssetOptions`.
+The generated header now includes project-owned identity constants, a project-local `RIPSTOP_ERROR_XOR`, an obfuscated project secret, and helper builders for `ProjectOptions` and `AssetOptions`.
 
 If you prefer to edit a checked-in template manually, start from [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h). It uses `ripstop::codec::utils::make_obfuscated_secret<...>()`, and `MakeProjectOptions()` resolves the secret at runtime with `.resolve()`.
 

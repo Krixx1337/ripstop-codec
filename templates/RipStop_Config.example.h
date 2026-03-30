@@ -7,6 +7,7 @@
 // 1. Error Output
 
 // Optional: switch RipStop to numeric-only error output in release-style builds.
+// #define RIPSTOP_ERROR_XOR 0x12345678u
 // #define RIPSTOP_HARDEN_ERRORS 1
 
 #include <ripstop/Codec.h>

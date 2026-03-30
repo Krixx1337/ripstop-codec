@@ -16,7 +16,8 @@ namespace ripstop::codec {
 namespace detail {
 
 std::uint32_t ErrorXorKey() noexcept {
-    static constinit const std::uint32_t key = ::HOSTILE_CORE_NAMESPACE::build_error_xor_key();
+    static constinit const std::uint32_t key =
+        ::HOSTILE_CORE_NAMESPACE::build_error_xor_key() ^ static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR);
     return key;
 }
 

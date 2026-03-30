@@ -50,6 +50,7 @@ def build_config() -> str:
 
 // 1. Error Output
 
+#define RIPSTOP_ERROR_XOR {fmt_u32(random_u32())}
 #define RIPSTOP_HARDEN_ERRORS 1
 
 #include <ripstop/Codec.h>

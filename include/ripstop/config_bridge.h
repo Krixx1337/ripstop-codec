@@ -35,6 +35,10 @@ public:
 #include RIPSTOP_USER_CONFIG_HEADER
 #endif
 
+#ifndef RIPSTOP_ERROR_XOR
+#define RIPSTOP_ERROR_XOR 0u
+#endif
+
 #ifndef RIPSTOP_HARDEN_ERRORS
 #define RIPSTOP_HARDEN_ERRORS 0
 #endif

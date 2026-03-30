@@ -74,6 +74,7 @@ python path/to/ripstop-codec/tools/generate_config.py
 
 The generated header now includes:
 - project-owned `magic`, `domain_id`, tags, and secret material
+- project-local `RIPSTOP_ERROR_XOR` to further diversify hardened numeric error IDs
 - helper functions for `MakeProjectOptions()` and `MakeAssetOptions()`
 
 If you prefer to check in a template and edit constants manually, start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h).

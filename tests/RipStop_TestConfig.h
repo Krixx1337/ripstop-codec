@@ -4,6 +4,7 @@
 #include <memory>
 #include <span>
 
+#define RIPSTOP_ERROR_XOR 0x13572468u
 #define RIPSTOP_HARDEN_ERRORS 1
 
 namespace ripstop::codec {
