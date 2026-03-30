@@ -49,6 +49,39 @@ template <typename T>
     return error;
 }
 
+} // namespace
+
+std::string to_string(ErrorCode error) {
+#if RIPSTOP_HARDEN_ERRORS
+    return ::HOSTILE_CORE_NAMESPACE::harden_error_code(error, 0u);
+#else
+    switch (error) {
+    case ErrorCode::Success: return "Success";
+    case ErrorCode::BufferTooSmall: return "BufferTooSmall";
+    case ErrorCode::MagicMismatch: return "MagicMismatch";
+    case ErrorCode::UnsupportedVersion: return "UnsupportedVersion";
+    case ErrorCode::UnsupportedScrambleId: return "UnsupportedScrambleId";
+    case ErrorCode::MissingScramblerFunc: return "MissingScramblerFunc";
+    case ErrorCode::InvalidFlags: return "InvalidFlags";
+    case ErrorCode::InvalidIdentityType: return "InvalidIdentityType";
+    case ErrorCode::SizeLimitExceeded: return "SizeLimitExceeded";
+    case ErrorCode::DomainMismatch: return "DomainMismatch";
+    case ErrorCode::UnsupportedCompression: return "UnsupportedCompression";
+    case ErrorCode::CompressionFailed: return "CompressionFailed";
+    case ErrorCode::DecompressionFailed: return "DecompressionFailed";
+    case ErrorCode::CrcMismatch: return "CrcMismatch";
+    case ErrorCode::PreFlightAbort: return "PreFlightAbort";
+    case ErrorCode::FileOpenFailed: return "FileOpenFailed";
+    case ErrorCode::FileReadFailed: return "FileReadFailed";
+    case ErrorCode::FileWriteFailed: return "FileWriteFailed";
+    }
+
+    return "UnknownError";
+#endif
+}
+
+namespace {
+
 [[nodiscard]] bool has_flag(HeaderFlags value, HeaderFlags flag) {
     return (static_cast<std::uint16_t>(value) & static_cast<std::uint16_t>(flag)) != 0;
 }

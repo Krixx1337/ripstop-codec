@@ -15,7 +15,7 @@ It gives you:
 - an explicit on-disk `compression_id` so the format can evolve safely
 - optional scrambling tied to your project and asset context
 - CRC validation on decode
-- optional hardened numeric error output with project-specific `ErrorCode` values
+- optional hardened numeric error output without embedding plaintext error names
 - public `SecureWipe(...)` helpers for caller-owned sensitive buffers
 - a small `std::span`-based API that fits into existing load/save paths
 - an optional zero-copy `std::istream` bridge for decoded buffers in C++20
@@ -74,8 +74,6 @@ python path/to/ripstop-codec/tools/generate_config.py
 
 The generated header now includes:
 - project-owned `magic`, `domain_id`, tags, and secret material
-- `RIPSTOP_ERROR_XOR`
-- randomized `ErrorCode` values for hardened builds
 - helper functions for `MakeProjectOptions()` and `MakeAssetOptions()`
 
 If you prefer to check in a template and edit constants manually, start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h).

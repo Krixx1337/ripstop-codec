@@ -41,6 +41,7 @@ add_library(RipStopCodec::ripstop-codec ALIAS ripstop-codec)
 target_sources(
   ripstop-codec
   PRIVATE
+    src/detail/memory_hygiene.cpp
     src/RipStop.cpp
     third_party/miniz/miniz.c
   PUBLIC
@@ -54,7 +55,6 @@ target_sources(
       include/ripstop/Format.h
       include/ripstop/MemStream.h
       include/ripstop/detail/constexpr_obfuscation.h
-      include/ripstop/detail/hostile_imports.h
       include/ripstop/detail/memory_hygiene.h
       include/ripstop/detail/polymorphic_error.h
 )
@@ -90,8 +90,11 @@ target_compile_definitions(
   ripstop-codec
   PRIVATE
     MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
+    HOSTILE_CORE_EXPORT=
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
+  PUBLIC
+    HOSTILE_CORE_NAMESPACE=ripstop_hostile
 )
 
 set_target_properties(

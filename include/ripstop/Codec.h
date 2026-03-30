@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef HOSTILE_CORE_NAMESPACE
+#define HOSTILE_CORE_NAMESPACE ripstop_hostile
+#endif
+
 #define RIPSTOP_CODEC_VERSION_MAJOR 1
 #define RIPSTOP_CODEC_VERSION_MINOR 0
 #define RIPSTOP_CODEC_VERSION_PATCH 1
@@ -54,10 +58,10 @@ struct AssetOptions {
 };
 
 namespace detail {
-inline constexpr std::uint64_t split_mix_increment = ::ripstop::hostile_core::split_mix_increment;
+inline constexpr std::uint64_t split_mix_increment = ::HOSTILE_CORE_NAMESPACE::split_mix_increment;
 
 [[nodiscard]] constexpr std::uint64_t mix64(std::uint64_t x) {
-    return ::ripstop::hostile_core::mix64(x);
+    return ::HOSTILE_CORE_NAMESPACE::mix64(x);
 }
 
 template <typename T>
@@ -162,35 +166,35 @@ template <typename T>
 
 namespace utils {
 template <std::uint64_t Secret, std::uint8_t Mask>
-using ObfuscatedSecret = ::ripstop::hostile_core::ObfuscatedSecret<Secret, Mask>;
+using ObfuscatedSecret = ::HOSTILE_CORE_NAMESPACE::ObfuscatedSecret<Secret, Mask>;
 
 template <std::uint64_t Secret, std::uint8_t Mask>
 [[nodiscard]] consteval auto make_obfuscated_secret() {
-    return ::ripstop::hostile_core::make_obfuscated_secret<Secret, Mask>();
+    return ::HOSTILE_CORE_NAMESPACE::make_obfuscated_secret<Secret, Mask>();
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_string(std::string_view value) {
-    return ::ripstop::hostile_core::hash_string(value);
+    return ::HOSTILE_CORE_NAMESPACE::hash_string(value);
 }
 
 [[nodiscard]] inline constexpr std::uint64_t hash_uint64(std::uint64_t value) {
-    return ::ripstop::hostile_core::hash_uint64(value);
+    return ::HOSTILE_CORE_NAMESPACE::hash_uint64(value);
 }
 
 } // namespace utils
 
 inline void SecureWipe(std::string& value) noexcept {
-    ::ripstop::hostile_core::secure_wipe(value);
+    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::vector<T>& value) noexcept {
-    ::ripstop::hostile_core::secure_wipe(value);
+    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
 }
 
 template <typename T>
 inline void SecureWipe(std::span<T> value) noexcept {
-    ::ripstop::hostile_core::secure_wipe(value);
+    ::HOSTILE_CORE_NAMESPACE::secure_wipe(value);
 }
 
 } // namespace ripstop::codec
