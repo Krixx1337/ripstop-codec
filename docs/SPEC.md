@@ -57,7 +57,7 @@ The decode path is:
 
 1. parse and validate the header
 2. verify `magic`, `codec_version`, `scramble_id`, and `domain_id`
-3. descramble the stored payload with the caller-provided scrambler if needed
+3. descramble the stored payload with the built-in or explicitly configured scrambler if needed
 4. decompress if needed
 5. compute CRC32 over the final uncompressed buffer
 6. reject on mismatch by returning a structured error
@@ -86,7 +86,10 @@ if password is not empty:
 state = mix64(state)
 ```
 
-The default scrambler then performs a SplitMix64-style XOR pass over the full payload buffer when `scramble_id == 0`. Callers may replace that scrambler entirely by providing `ProjectOptions::scrambler`, but custom scramblers are an advanced integration path.
+The default scrambler performs a SplitMix64-style XOR pass over the full payload buffer when
+`scramble_id == 0`. No custom code is needed. Advanced callers may replace it with
+`ProjectOptions::scrambler`; custom scramblers must use a stable nonzero ID and be deterministic and
+self-inverse.
 
 This gives the caller four independent levers:
 
@@ -111,7 +114,9 @@ context_seed = hash_string("textures/player_idle")
 
 The codec does not enforce how `context_seed` or `format_tag` should be chosen, but using a stable logical asset identifier is the recommended baseline policy.
 
-`format_tag` and `context_seed` are intentionally not stored in the header. The caller must provide the same values again during decode. If decode is attempted with the wrong tag or seed, the derived scramble state will not match the encoded payload and the final CRC check will fail.
+`format_tag` and `context_seed` are intentionally not stored in the header. The caller must provide
+the same values again during decode. With a wrong tag or seed, scrambled compressed data may fail
+decompression; otherwise final CRC validation fails.
 
 ---
 
@@ -171,7 +176,7 @@ The library exposes:
 - `ripstop::codec::peek_header(...)`, which validates and returns the unmasked header without decoding the payload
 - `ripstop::codec::decode_into(...)`, which decodes into caller-owned storage and returns `ErrorCode`
 - `ripstop::codec::decode_to_vector<T>(...)`, which decodes into a freshly allocated typed vector
-- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable string names in standard builds or hardened numeric strings when `RIPSTOP_HARDEN_ERRORS=1`
+- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable readable names
 - `ripstop::codec::SecureWipe(...)`, which erases caller-owned sensitive buffers
 - `ripstop::codec::utils::hash_string(...)` and `ripstop::codec::utils::hash_uint64(...)`, which provide deterministic caller-owned seed derivation and are `constexpr`
 
@@ -221,7 +226,7 @@ The caller is responsible for:
 - choosing `domain_id`
 - deriving `context_seed`
 - choosing `format_tag`
-- choosing whether to use a custom `scramble_id` and `scrambler`
+- optionally maintaining a stable nonzero ID and self-inverse function when opting into a custom scrambler
 - keeping `password` policy consistent between encode and decode
 - interpreting `identity_type`
 - enforcing `asset_version` policy

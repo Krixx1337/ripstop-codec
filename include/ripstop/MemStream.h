@@ -71,7 +71,9 @@ private:
 class MemStream final : public std::istream {
 public:
     MemStream(const std::uint8_t* data, std::size_t size)
-        : std::istream(&m_buffer), m_buffer(data, size) {
+        : std::istream(nullptr), m_buffer(data, size) {
+        rdbuf(&m_buffer);
+        clear();
     }
 
     explicit MemStream(std::span<const std::uint8_t> data)

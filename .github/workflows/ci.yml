@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, Win32]
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch == 'Win32' && 'x86' || 'x64' }}
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DRIPSTOP_BUILD_EXAMPLES=ON
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+      - run: build/ripstop-codec-basic-example.exe
+      - run: build/ripstop-codec-custom-scrambler-example.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        config: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = clang ]; then
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          else
+            echo "CC=gcc" >> "$GITHUB_ENV"
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          fi
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DRIPSTOP_BUILD_EXAMPLES=ON
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+      - run: ./build/ripstop-codec-basic-example
+      - run: ./build/ripstop-codec-custom-scrambler-example
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS="-fsanitize=address,undefined" -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build
+      - run: cmake --install build --prefix "$RUNNER_TEMP/ripstop"
+      - run: cmake -S tests/package_smoke -B package-smoke -G Ninja -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/ripstop"
+      - run: cmake --build package-smoke
+      - run: ./package-smoke/ripstop-package-smoke
+      - run: cmake -S tests/subdirectory_smoke -B subdirectory-smoke -G Ninja
+      - run: cmake --build subdirectory-smoke
+      - run: ./subdirectory-smoke/ripstop-subdirectory-smoke
+
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DRIPSTOP_BUILD_TESTS=OFF -DRIPSTOP_BUILD_FUZZER=ON
+      - run: cmake --build build --target ripstop-codec-fuzz-decode
+      - run: ./build/ripstop-codec-fuzz-decode -runs=1000

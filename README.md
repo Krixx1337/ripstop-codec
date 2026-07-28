@@ -1,228 +1,135 @@
-# RipStop Codec (C++20)
+# RipStop Codec
 
-**A lightweight C++20 library for protecting game assets, application resources, and proprietary data from casual ripping.**
+Small C++20 static library for wrapping assets in a project-specific binary envelope.
 
-`RipStop Codec` is a modern C++20 library for wrapping arbitrary data in a project-owned binary envelope that makes casual asset ripping, signature-based tooling, and basic file inspection more expensive. It is designed for games, desktop apps, tools, and other software that need a practical way to harden packaged resources, internal blobs, or proprietary files without redesigning the payload format itself.
+RipStop provides:
 
-Looking to securely download RipStop assets over hostile networks? Check out [BurnerNet](https://github.com/Krixx1337/burner-net).
+- project-specific file identity
+- Deflate compression
+- deterministic built-in scrambling
+- CRC corruption/context checks
+- byte, typed, file, and `std::istream`-bridge APIs
+- no callbacks, logging, retries, or process termination
 
-If you are searching for how to protect assets from being stolen, how to hide application resources in C++, or how to make binary files harder to identify and extract, this library is built for that use case.
+RipStop is obfuscation and integrity protection, not encryption. Do not use it for credentials,
+personal data, or secrets requiring cryptographic confidentiality.
 
-It gives you:
+## Quick start
 
-- project-specific file magic instead of obvious source signatures
-- optional Deflate compression
-- an explicit on-disk `compression_id` so the format can evolve safely
-- optional scrambling tied to your project and asset context
-- CRC validation on decode
-- optional hardened numeric error output without embedding plaintext error names
-- public `SecureWipe(...)` helpers for caller-owned sensitive buffers
-- a small `std::span`-based API that fits into existing load/save paths
-- an optional zero-copy `std::istream` bridge for decoded buffers in C++20
+### 1. Add the library
 
-## How Do I Protect Assets From Being Ripped?
+```cmake
+add_subdirectory(path/to/ripstop-codec)
+target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
+```
 
-Many developers ask questions like:
+Installed packages work too:
 
-- how do I protect game assets from extraction?
-- how do I hide proprietary application files?
-- how can I make JSON, textures, models, or binary resources harder to rip?
+```cmake
+find_package(RipStopCodec 1.1 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
+```
 
-Standard formats such as PNG, JSON, MP3, or custom binary blobs are easy for tools to classify because they expose recognizable headers and metadata. `RipStop Codec` solves that by moving data from a public, easy-to-identify layout into a private project-specific wrapper.
-
-It raises the cost of analysis with:
-
-- **Signature camouflage:** choose your own `magic` so shipped files stop looking like the formats every extractor expects
-- **Metadata masking:** everything after the plaintext magic is masked at rest
-- **Contextual scrambling:** bind data to your project and asset context
-- **Integrity validation:** CRC checks help reject corrupted or mismatched decodes
-- **Compression support:** reduce size while keeping the wrapped format private
-
-## Use Cases
-
-RipStop is engine-agnostic and can protect any file format your application already uses:
-
-- **Games:** textures, shaders, meshes, audio, dialogue, save-adjacent resources, and level data
-- **Desktop applications:** proprietary configuration, packaged content, internal databases, and bundled scripts
-- **Creative software:** presets, templates, brushes, sample packs, and other intellectual property
-- **Embedded or edge systems:** lightweight binary payload protection where full encryption is not the goal
-
-## Why RipStop
-
-- **Engine-agnostic:** wrap textures, JSON, meshes, audio, or custom blobs without redesigning the payload format itself
-- **Modern weave:** built around C++20 spans, deterministic helpers, and caller-owned policy
-- **Signature camouflage:** choose your own `magic` so shipped files stop looking like the formats every extractor expects
-- **Header stealth:** everything after the plaintext magic is masked at rest
-- **Patch-friendly:** output stays deterministic by default when `nonce = 0`
-- **Lean integration:** fits existing pipelines without imposing a heavyweight packaging system
-
-RipStop intentionally does not ship with a baked-in default `ProjectOptions::magic`. You supply project-owned identity values instead of inheriting a shared global signature.
-
-## Security Boundary
-
-`RipStop Codec` is **not cryptographic encryption**. It is an obfuscation and integrity layer for hardening assets, caches, application resources, or internal data blobs against casual analysis and basic tooling. Do not use it as a substitute for AES or ChaCha20 when you need real confidentiality for secrets, credentials, or user data.
-
-Its purpose is practical asset protection and file hardening, not strong secrecy against a determined reverse engineer.
-
-## Quick Start
-
-Recommended integration order:
-- Default: static library via CMake
-- Supported fallback: source-drop into your project or engine build
-- Usually unnecessary: dynamic/shared packaging
-
-### 1. Create a project-local config
-
-Start from [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h), copy it into your project as `RipStop_Config.h`, and change `kProjectSeed` to a project-unique string. The template derives `magic`, `domain_id`, tags, and the project secret from that seed at compile time.
-
-The Python generator is optional. If you want randomized constants instead of deterministic seed derivation, `python path/to/ripstop-codec/tools/generate_config.py` is still available as a power-user path.
-
-### 2. Encode assets or proprietary data into your private format
+### 2. Provide one project-unique seed
 
 ```cpp
 #include <ripstop/Codec.h>
-#include "RipStop_Config.h"
 
-#include <iostream>
-#include <vector>
+constexpr auto identity =
+    ripstop::codec::GenerateIdentity("your-company:your-product:change-this");
 
-std::vector<float> mesh_data = {1.0f, 2.0f, 3.0f};
+const ripstop::codec::ProjectOptions project{
+    .magic = identity.magic,
+    .domain_id = identity.domain_id,
+    .project_secret = identity.project_secret,
+};
+```
 
-const auto project = ripstop_config::MakeProjectOptions();
+Keep this seed stable after shipping. Changing it makes existing encoded assets unreadable.
+For a reusable config header, copy
+[`templates/RipStop_Config.example.h`](templates/RipStop_Config.example.h) and change only
+`kProjectSeed`.
 
-const auto asset = ripstop_config::MakeAssetOptions(
-    ripstop_config::tagPrimaryAsset,
-    ripstop_config::HashContextString("meshes/player"));
+### 3. Encode and decode
 
-auto encoded = ripstop::codec::encode(std::span{mesh_data}, project, asset);
+```cpp
+std::vector<float> input{1.0f, 2.0f, 3.0f};
 
+auto encoded = ripstop::codec::encode(std::span{input}, project);
 if (!encoded) {
     std::cerr << ripstop::codec::to_string(encoded.error) << '\n';
     return;
 }
-```
 
-### 3. Decode into your own memory
-
-```cpp
-std::vector<float> out_data(mesh_data.size());
-
-const auto err = ripstop::codec::decode_into(*encoded, std::span{out_data}, project, asset);
-
-if (err != ripstop::codec::ErrorCode::Success) {
-    std::cerr << ripstop::codec::to_string(err) << '\n';
-    return;
-}
-```
-
-## Recommended Default Profile
-
-For most projects, start with:
-
-- one `format_tag` per asset class
-- one stable `context_seed` per logical asset id
-- `compress = true`
-- `scramble = true`
-- `nonce = 0` for deterministic builds
-- no `password` unless you have a specific compatibility policy for it
-
-```cpp
-ripstop::codec::AssetOptions asset{
-    .format_tag = 0x11223344u,
-    .context_seed = ripstop::codec::utils::hash_string("textures/player_idle"),
-    .compress = true,
-    .scramble = true,
-};
-```
-
-`format_tag` and `context_seed` are not stored in the file header. The caller provides them again during decode. If the caller supplies the wrong tag or seed, decode will fail its CRC check.
-
-## Useful Patterns
-
-### Mixed raw and wrapped loader path
-
-```cpp
-if (ripstop::codec::is_encoded(file_bytes, project.magic)) {
-    auto decoded = ripstop::codec::decode(file_bytes, project);
-} else {
-    // Load the raw file normally.
-}
-```
-
-### Decode text directly
-
-```cpp
-auto json = ripstop::codec::decode_to_string(file_bytes, project);
-```
-
-### Wipe sensitive caller-owned buffers
-
-```cpp
-ripstop::codec::SecureWipe(out_data);
-```
-
-### Zero-copy parsing with `std::istream`
-
-```cpp
-#include <ripstop/MemStream.h>
-
-auto decoded = ripstop::codec::decode(file_bytes, project);
+auto decoded = ripstop::codec::decode_to_vector<float>(*encoded, project);
 if (!decoded) {
+    std::cerr << ripstop::codec::to_string(decoded.error) << '\n';
     return;
 }
-
-ripstop::codec::MemStream stream(std::span{decoded.value});
 ```
 
-`<ripstop/MemStream.h>` stays separate from `<ripstop/Codec.h>` so the core codec API remains lean, but C++20 callers can still pass decoded in-memory data to existing `std::istream`-based loaders without copying it into a `std::stringstream`.
+Compression and built-in scrambling are enabled by default. Most applications need no custom
+scrambler, hook, policy class, or generated code. Full runnable example:
+[`examples/basic.cpp`](examples/basic.cpp).
 
-### How to add anti-diffing or offset noise
+## Asset identity
+
+Use `AssetOptions` when a project has multiple asset classes or logical asset IDs:
 
 ```cpp
-ripstop::codec::AssetOptions asset{
-    .format_tag = 0x11223344u,
-    .context_seed = 0x55667788u,
-    .nonce = 0x1020304050607080ull,
-    .padding_size = 24,
+const ripstop::codec::AssetOptions asset{
+    .format_tag = ripstop::codec::utils::hash_string("mesh"),
+    .context_seed = ripstop::codec::utils::hash_string("maps/queensdale"),
 };
+
+auto encoded = ripstop::codec::encode(bytes, project, asset);
+auto decoded = ripstop::codec::decode(*encoded, project, asset);
 ```
 
-### How to use signature camouflage
+`format_tag`, `context_seed`, and `password` are caller-supplied decode context; they are not stored
+in the header. Wrong values fail decompression or CRC validation. Leave `nonce = 0` for reproducible
+builds.
 
-To make protected assets harder to classify, set `ProjectOptions::magic` to mimic a familiar format like PNG: `0x474E5089`. RipStop still stores your private payload and metadata, but automated rippers now see a decoy signature first.
+## Error handling
 
-### How to reduce asset swapping mistakes or tampering
-
-Because `format_tag` and `context_seed` participate in decode, mismatched asset identity inputs can cause CRC validation to fail. That gives you a lightweight way to bind decoding to the expected asset context.
-
-### One-call disk helpers
+All failures return `ErrorCode`. RipStop never logs, aborts, retries, or invokes hidden callbacks.
 
 ```cpp
-auto err = ripstop::codec::encode_file("input.bin", "output.rip", project);
+if (result.error != ripstop::codec::ErrorCode::Success) {
+    log(ripstop::codec::to_string(result.error));
+}
 ```
 
-The file helpers accept `std::filesystem::path`, so UTF-8 and native wide-character paths work correctly across supported platforms.
+`to_string()` returns stable readable names. Cast `ErrorCode` to its underlying integer when numeric
+telemetry is preferred.
 
-## Integration
+## Advanced custom scrambler
 
-For CMake, treat this repository as the source of truth:
+Most users should keep the built-in scrambler. A custom scrambler must:
 
-```cmake
-add_subdirectory(path/to/ripstop-codec)
-target_link_libraries(MyProject PRIVATE ripstop-codec)
-```
+- use a stable, project-owned, nonzero `scramble_id`
+- be deterministic
+- be self-inverse because the same function runs during encode and decode
+- remain available for every asset written with that ID
 
-Or link the alias target:
+See [`examples/custom_scrambler.cpp`](examples/custom_scrambler.cpp).
 
-```cmake
-target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
-```
+## Important limits
 
-For manual integration without CMake, add `include/` and `third_party/` to your include paths, then compile the implementation sources documented in [INSTALL.md](./INSTALL.md). `CMakeLists.txt` is the source of truth for the current build definition.
+- Format v1 uses native little-endian, native object representation for typed overloads.
+- Typed overloads accept trivially copyable types. Their padding and layout remain compiler/ABI
+  dependent; serialize explicitly for portable assets.
+- Default maximum encoded or decoded payload is 256 MiB.
+- `SecureWipe` accepts strings and trivially copyable live buffers. It is best-effort memory hygiene,
+  not a guarantee against compiler/runtime copies.
+- `MemStream` does not own its source buffer. Keep that buffer alive for the stream lifetime.
 
 ## More
 
-- integration details: [INSTALL.md](./INSTALL.md)
-- binary format and threat model: [docs/SPEC.md](./docs/SPEC.md)
-- project config template: [templates/RipStop_Config.example.h](./templates/RipStop_Config.example.h)
-- licensing and bundled third-party notices: [LICENSE](./LICENSE), [NOTICE](./NOTICE)
+- [installation and source integration](INSTALL.md)
+- [wire format and threat model](docs/SPEC.md)
+- [compatibility policy](docs/COMPATIBILITY.md)
+- [changelog](CHANGELOG.md)
+- [security policy](SECURITY.md)
+- [contributing](CONTRIBUTING.md)
+- [third-party notices](NOTICE)

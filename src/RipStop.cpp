@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <system_error>
 
 #if defined(_WIN32)
 #if !defined(NOMINMAX)
@@ -39,30 +40,7 @@ void secure_wipe(void* ptr, std::size_t size) noexcept {
 
 } // namespace obf
 
-namespace detail {
-
-std::uint32_t ErrorXorKey() noexcept {
-    static constinit const std::uint32_t key =
-        ::ripstop::codec::obf::build_error_xor_key() ^ static_cast<std::uint32_t>(RIPSTOP_ERROR_XOR);
-    return key;
-}
-
-std::shared_ptr<ISecurityPolicy> ResolveSecurityPolicy(std::shared_ptr<ISecurityPolicy> policy) {
-    if (policy) {
-        return policy;
-    }
-
-    static std::shared_ptr<ISecurityPolicy> default_policy = std::make_shared<DefaultSecurityPolicy>();
-    return default_policy;
-}
-
-} // namespace detail
-
 namespace {
-
-const ISecurityPolicy& SecurityPolicy(const ProjectOptions& project) {
-    return *detail::ResolveSecurityPolicy(project.policy);
-}
 
 static_assert(std::endian::native == std::endian::little,
               "RipStop Codec currently requires a little-endian architecture.");
@@ -76,33 +54,9 @@ template <typename T>
     return Result<T>{.error = error};
 }
 
-template <typename T>
-[[nodiscard]] Result<T> make_tamper_error(ErrorCode error, const ProjectOptions& project) {
-    SecurityPolicy(project).OnError(error);
-    SecurityPolicy(project).OnTamper(error);
-    return Result<T>{.error = error};
-}
-
-[[nodiscard]] ErrorCode report_error(ErrorCode error, const ProjectOptions& project) {
-    if (error != ErrorCode::Success) {
-        SecurityPolicy(project).OnError(error);
-    }
-
-    return error;
-}
-
-[[nodiscard]] ErrorCode report_tamper_error(ErrorCode error, const ProjectOptions& project) {
-    SecurityPolicy(project).OnError(error);
-    SecurityPolicy(project).OnTamper(error);
-    return error;
-}
-
 } // namespace
 
 std::string to_string(ErrorCode error) {
-#if RIPSTOP_HARDEN_ERRORS
-    return ::ripstop::codec::obf::harden_error_code(error, detail::ErrorXorKey());
-#else
     switch (error) {
     case ErrorCode::Success: return "Success";
     case ErrorCode::BufferTooSmall: return "BufferTooSmall";
@@ -125,7 +79,6 @@ std::string to_string(ErrorCode error) {
     }
 
     return "UnknownError";
-#endif
 }
 
 namespace {
@@ -164,6 +117,11 @@ void set_flag(HeaderFlags& value, HeaderFlags flag) {
     }
 
     return false;
+}
+
+[[nodiscard]] bool is_valid_identity_type(std::uint8_t value) {
+    return value <= static_cast<std::uint8_t>(IdentityType::Random) ||
+           value >= static_cast<std::uint8_t>(IdentityType::CustomMin);
 }
 
 [[nodiscard]] Result<mz_ulong> to_mz_ulong(std::size_t size) {
@@ -299,6 +257,8 @@ void default_scrambler(std::span<std::uint8_t> buffer, std::uint64_t state, cons
 
 [[nodiscard]] ScramblerFunc resolve_scrambler(const ProjectOptions& project) {
     if (project.scrambler != nullptr) {
+        // v1.0 allowed a custom function with id 0. Preserve decode compatibility,
+        // while new integrations use non-zero IDs to distinguish custom algorithms.
         return project.scrambler;
     }
 
@@ -320,7 +280,6 @@ void default_scrambler(std::span<std::uint8_t> buffer, std::uint64_t state, cons
         state ^= utils::hash_string(asset.password);
     }
 
-    SecurityPolicy(project).OnScrambleState(state);
     return mix64(state);
 }
 
@@ -357,18 +316,30 @@ void transform_header(Header& header, const ProjectOptions& project) {
     transform_header(header, project);
 
     if (header.magic != project.magic) {
-        return make_tamper_error<Header>(ErrorCode::MagicMismatch, project);
+        return make_error<Header>(ErrorCode::MagicMismatch);
     }
 
-    if (header.codec_version > Header::CodecVersion) {
+    if (header.domain_id != project.domain_id) {
+        return make_error<Header>(ErrorCode::DomainMismatch);
+    }
+
+    if (header.codec_version != Header::CodecVersion) {
         return make_error<Header>(ErrorCode::UnsupportedVersion);
     }
 
-    if (header.header_size < sizeof(Header)) {
+    if (header.header_size < sizeof(Header) || header.header_size > encoded_buffer.size()) {
         return make_error<Header>(ErrorCode::UnsupportedVersion);
     }
 
     if ((static_cast<std::uint16_t>(header.flags) & ~k_known_flags_mask) != 0) {
+        return make_error<Header>(ErrorCode::InvalidFlags);
+    }
+
+    if (!is_valid_identity_type(header.identity_type)) {
+        return make_error<Header>(ErrorCode::InvalidIdentityType);
+    }
+
+    if (header.reserved != 0) {
         return make_error<Header>(ErrorCode::InvalidFlags);
     }
 
@@ -379,6 +350,15 @@ void transform_header(Header& header, const ProjectOptions& project) {
 
     if (has_flag(header.flags, HeaderFlags::Compressed) != (compression != CompressionType::None)) {
         return make_error<Header>(ErrorCode::UnsupportedCompression);
+    }
+
+    if (has_flag(header.flags, HeaderFlags::Scrambled)) {
+        if (header.scramble_id != project.scramble_id) {
+            return make_error<Header>(ErrorCode::UnsupportedScrambleId);
+        }
+        if (resolve_scrambler(project) == nullptr) {
+            return make_error<Header>(ErrorCode::MissingScramblerFunc);
+        }
     }
 
     if (const ErrorCode size_error = validate_size(header.uncompressed_size); size_error != ErrorCode::Success) {
@@ -393,8 +373,7 @@ void transform_header(Header& header, const ProjectOptions& project) {
                                                   ? header.compressed_size
                                                   : header.uncompressed_size;
 
-    const std::size_t total_size = static_cast<std::size_t>(header.header_size) + declared_payload_size;
-    if (encoded_buffer.size() != total_size) {
+    if (declared_payload_size != encoded_buffer.size() - header.header_size) {
         return make_error<Header>(ErrorCode::BufferTooSmall);
     }
 
@@ -432,18 +411,48 @@ void transform_header(Header& header, const ProjectOptions& project) {
 
 [[nodiscard]] ErrorCode write_file_bytes(const std::filesystem::path& output_path,
                                          std::span<const std::uint8_t> data) {
-    std::ofstream output(output_path, std::ios::binary | std::ios::trunc);
+    std::filesystem::path temp_path = output_path;
+    temp_path += std::filesystem::path{
+        ".ripstop." + std::to_string(make_entropy_seed(data.size())) + ".tmp"};
+
+    std::ofstream output(temp_path, std::ios::binary | std::ios::trunc);
     if (!output) {
         return ErrorCode::FileOpenFailed;
     }
 
     if (!data.empty() && !output.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()))) {
+        output.close();
+        std::error_code ignored;
+        std::filesystem::remove(temp_path, ignored);
         return ErrorCode::FileWriteFailed;
     }
 
+    output.flush();
     if (!output) {
+        output.close();
+        std::error_code ignored;
+        std::filesystem::remove(temp_path, ignored);
         return ErrorCode::FileWriteFailed;
     }
+
+    output.close();
+
+#if defined(_WIN32)
+    if (!MoveFileExW(temp_path.c_str(), output_path.c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        std::error_code ignored;
+        std::filesystem::remove(temp_path, ignored);
+        return ErrorCode::FileWriteFailed;
+    }
+#else
+    std::error_code rename_error;
+    std::filesystem::rename(temp_path, output_path, rename_error);
+    if (rename_error) {
+        std::error_code ignored;
+        std::filesystem::remove(temp_path, ignored);
+        return ErrorCode::FileWriteFailed;
+    }
+#endif
 
     return ErrorCode::Success;
 }
@@ -457,69 +466,32 @@ void transform_header(Header& header, const ProjectOptions& project) {
         return ErrorCode::BufferTooSmall;
     }
 
-    if (header.scramble_id != project.scramble_id) {
+    if (has_flag(header.flags, HeaderFlags::Scrambled) && header.scramble_id != project.scramble_id) {
         return ErrorCode::UnsupportedScrambleId;
     }
 
     const CompressionType compression = static_cast<CompressionType>(header.compression_id);
-    if (compression == CompressionType::None) {
-        const ErrorCode decompress_error = decompress_payload(payload, output, compression);
-        if (decompress_error != ErrorCode::Success) {
-            return report_error(decompress_error, project);
-        }
-
-        if (has_flag(header.flags, HeaderFlags::Scrambled)) {
-            if (const ErrorCode error = transform_in_place(output, project, asset, header);
-                error != ErrorCode::Success) {
-                return error;
-            }
-            if (!SecurityPolicy(project).PostDescramble(output)) {
-                return report_error(ErrorCode::PreFlightAbort, project);
-            }
-        }
-
-        if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
-            return report_tamper_error(ErrorCode::CrcMismatch, project);
-        }
-
-        return ErrorCode::Success;
-    }
-
-    if (const ErrorCode size_error = validate_size(header.uncompressed_size); size_error != ErrorCode::Success) {
-        return size_error;
-    }
-
-    std::span<const std::uint8_t> compressed_input = payload;
-    std::vector<std::uint8_t> temp_payload;
-
+    std::vector<std::uint8_t> stored_payload(payload.begin(), payload.end());
     if (has_flag(header.flags, HeaderFlags::Scrambled)) {
-        // Guardrail: compressed decode cannot descramble into `output` and then ask miniz
-        // to read from that same buffer. zlib-style decompress is not an in-place contract.
-        temp_payload.assign(payload.begin(), payload.end());
-        if (const ErrorCode error = transform_in_place(temp_payload, project, asset, header);
+        if (const ErrorCode error = transform_in_place(stored_payload, project, asset, header);
             error != ErrorCode::Success) {
-            SecureWipe(temp_payload);
-            return report_error(error, project);
+            SecureWipe(stored_payload);
+            return error;
         }
-        if (!SecurityPolicy(project).PostDescramble(temp_payload)) {
-            SecureWipe(temp_payload);
-            return report_error(ErrorCode::PreFlightAbort, project);
-        }
-        compressed_input = temp_payload;
     }
 
-    if (const ErrorCode decompress_error = decompress_payload(compressed_input, output, compression);
+    if (const ErrorCode decompress_error = decompress_payload(stored_payload, output, compression);
         decompress_error != ErrorCode::Success) {
-        SecureWipe(temp_payload);
-        return report_error(decompress_error, project);
+        SecureWipe(stored_payload);
+        return decompress_error;
     }
 
     if (compute_crc32(output) != unmask_crc(header.masked_crc, project)) {
-        SecureWipe(temp_payload);
-        return report_tamper_error(ErrorCode::CrcMismatch, project);
+        SecureWipe(stored_payload);
+        return ErrorCode::CrcMismatch;
     }
 
-    SecureWipe(temp_payload);
+    SecureWipe(stored_payload);
     return ErrorCode::Success;
 }
 
@@ -544,6 +516,16 @@ Result<std::vector<std::uint8_t>> encode_impl(std::span<const std::uint8_t> raw_
                                               const AssetOptions& asset) {
     if (const ErrorCode size_error = validate_size(raw_buffer.size()); size_error != ErrorCode::Success) {
         return make_error<std::vector<std::uint8_t>>(size_error);
+    }
+
+    if (!is_valid_identity_type(static_cast<std::uint8_t>(asset.identity_type))) {
+        return make_error<std::vector<std::uint8_t>>(ErrorCode::InvalidIdentityType);
+    }
+
+    if (asset.scramble) {
+        if (resolve_scrambler(project) == nullptr) {
+            return make_error<std::vector<std::uint8_t>>(ErrorCode::MissingScramblerFunc);
+        }
     }
 
     Header header{};
@@ -603,11 +585,6 @@ Result<std::vector<std::uint8_t>> encode_impl(std::span<const std::uint8_t> raw_
 Result<std::vector<std::uint8_t>> decode_impl(std::span<const std::uint8_t> encoded_buffer,
                                               const ProjectOptions& project,
                                               const AssetOptions& asset) {
-    if (!SecurityPolicy(project).PreDecode(encoded_buffer)) {
-        SecurityPolicy(project).OnError(ErrorCode::PreFlightAbort);
-        return make_error<std::vector<std::uint8_t>>(ErrorCode::PreFlightAbort);
-    }
-
     const Result<Header> header_result = peek_header(encoded_buffer, project);
     if (!header_result) {
         return make_error<std::vector<std::uint8_t>>(header_result.error);
@@ -683,10 +660,6 @@ ErrorCode decode_into(std::span<const std::uint8_t> encoded_buffer,
     }
 
     const Header& header = header_result.value;
-    if (header.domain_id != project.domain_id) {
-        return report_tamper_error(ErrorCode::DomainMismatch, project);
-    }
-
     const std::span<const std::uint8_t> payload = encoded_buffer.subspan(header.header_size);
     return decode_payload_into(payload, header, output, project, asset);
 }

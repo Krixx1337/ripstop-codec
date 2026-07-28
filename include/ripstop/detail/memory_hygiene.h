@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #ifndef HOSTILE_CORE_EXPORT
@@ -14,17 +15,19 @@ namespace ripstop::codec::obf {
 HOSTILE_CORE_EXPORT void secure_wipe(void* ptr, std::size_t size) noexcept;
 
 inline void secure_wipe(std::string& value) noexcept {
-    secure_wipe(value.data(), value.capacity());
+    secure_wipe(value.data(), value.size());
     value.clear();
 }
 
 template <typename T>
+    requires std::is_trivially_copyable_v<T>
 inline void secure_wipe(std::vector<T>& value) noexcept {
-    secure_wipe(value.data(), value.capacity() * sizeof(T));
+    secure_wipe(value.data(), value.size() * sizeof(T));
     value.clear();
 }
 
 template <typename T>
+    requires std::is_trivially_copyable_v<T>
 inline void secure_wipe(std::span<T> value) noexcept {
     secure_wipe(value.data(), value.size_bytes());
 }
