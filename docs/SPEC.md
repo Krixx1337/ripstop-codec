@@ -169,6 +169,8 @@ This prevents simple known-plaintext CRC guesses from matching obvious header by
 The library exposes:
 
 - `ripstop::codec::ProjectOptions` and `ripstop::codec::AssetOptions`, which group the caller-controlled codec context
+- `ripstop::codec::make_project_options(seed)`, which deterministically derives default project
+  options from one compile-time project seed
 - `ripstop::codec::encode(...)`, which wraps a raw byte buffer into a caller-magic envelope and returns `Result<std::vector<std::uint8_t>>`
 - `ripstop::codec::decode(...)`, which validates and unwraps a caller-magic envelope back into raw bytes and returns `Result<std::vector<std::uint8_t>>`
 - `ripstop::codec::decode_to_string(...)`, which validates and unwraps a caller-magic envelope into `std::string`
@@ -182,6 +184,7 @@ The library exposes:
 
 The simple path is intentionally supported:
 
+- `constexpr auto project = make_project_options("company:product")`
 - `encode(buffer, project)`
 - `decode(buffer, project)`
 - `decode_into(buffer, output, project)`

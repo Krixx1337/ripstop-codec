@@ -217,6 +217,15 @@ template <std::uint64_t Secret, std::uint8_t Mask>
     };
 }
 
+[[nodiscard]] consteval ProjectOptions make_project_options(std::string_view seed) noexcept {
+    const ProjectIdentity identity = GenerateIdentity(seed);
+    return ProjectOptions{
+        .magic = identity.magic,
+        .domain_id = identity.domain_id,
+        .project_secret = identity.project_secret,
+    };
+}
+
 inline void SecureWipe(std::string& value) noexcept {
     ::ripstop::codec::obf::secure_wipe(value);
 }

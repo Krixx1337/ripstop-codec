@@ -6,6 +6,7 @@
 - Removed polymorphic/numeric error-string hardening; error names are always readable.
 - Kept the format-v1 40-byte header and existing asset compatibility.
 - Made built-in scrambling the documented plug-and-play default.
+- Added one-line deterministic `make_project_options(seed)` setup and removed the Python config generator.
 - Allowed typed encoding of all trivially copyable values.
 - Added stricter header validation and transactional file replacement.
 - Fixed `MemStream` initialization and constrained secure wiping to live safe buffers.

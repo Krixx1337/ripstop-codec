@@ -5,12 +5,7 @@
 #include <vector>
 
 int main() {
-    constexpr auto identity = ripstop::codec::GenerateIdentity("package-smoke");
-    const ripstop::codec::ProjectOptions project{
-        .magic = identity.magic,
-        .domain_id = identity.domain_id,
-        .project_secret = identity.project_secret,
-    };
+    constexpr auto project = ripstop::codec::make_project_options("package-smoke");
     const std::vector<std::uint8_t> input{1, 2, 3};
     const auto encoded = ripstop::codec::encode(std::span{input}, project);
     const auto decoded = encoded ? ripstop::codec::decode(*encoded, project)

@@ -9,7 +9,7 @@ namespace ripstop_config {
 
 // Change this once, before shipping assets. Changing it later invalidates existing assets.
 inline constexpr std::string_view kProjectSeed = "change-me:company/product";
-inline constexpr auto kProjectIdentity = ripstop::codec::GenerateIdentity(kProjectSeed);
+inline constexpr auto kProjectOptions = ripstop::codec::make_project_options(kProjectSeed);
 
 inline constexpr std::uint16_t kDefaultAssetVersion = 1u;
 inline constexpr std::uint64_t tagPrimaryAsset =
@@ -17,15 +17,8 @@ inline constexpr std::uint64_t tagPrimaryAsset =
 inline constexpr std::uint64_t tagSecondaryAsset =
     ripstop::codec::utils::hash_string(kProjectSeed, "tag:secondary");
 
-inline constexpr auto kProjectSecret =
-    ripstop::codec::utils::make_obfuscated_secret<kProjectIdentity.project_secret, 0x5Cu>();
-
-[[nodiscard]] inline ripstop::codec::ProjectOptions MakeProjectOptions() {
-    return {
-        .magic = kProjectIdentity.magic,
-        .domain_id = kProjectIdentity.domain_id,
-        .project_secret = kProjectSecret.resolve(),
-    };
+[[nodiscard]] inline constexpr ripstop::codec::ProjectOptions MakeProjectOptions() {
+    return kProjectOptions;
 }
 
 [[nodiscard]] inline constexpr std::uint64_t HashContextString(std::string_view value) {

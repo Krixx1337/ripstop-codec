@@ -47,17 +47,16 @@ Add:
 
 ## Project setup
 
-Copy `templates/RipStop_Config.example.h` into the application, rename it if desired, and change
-`kProjectSeed`. Built-in compression and scrambling need no custom code.
+No generated config is required:
 
-`tools/generate_config.py` is an optional advanced path for randomized constants:
-
-```powershell
-python tools/generate_config.py --out path\to\RipStop_Config.h
+```cpp
+constexpr auto project =
+    ripstop::codec::make_project_options("your-company:your-product");
 ```
 
-Generator refuses to overwrite an existing config unless `--force` is passed. Rotation changes
-project identity and invalidates old encoded assets.
+Keep that seed stable after shipping because changing it invalidates existing assets. Projects
+wanting central tags and helpers may copy `templates/RipStop_Config.example.h` and change only
+`kProjectSeed`. Explicit `ProjectOptions` remains available for existing assets and advanced setups.
 
 ## Build and test
 

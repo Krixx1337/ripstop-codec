@@ -35,18 +35,12 @@ target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
 ```cpp
 #include <ripstop/Codec.h>
 
-constexpr auto identity =
-    ripstop::codec::GenerateIdentity("your-company:your-product:change-this");
-
-const ripstop::codec::ProjectOptions project{
-    .magic = identity.magic,
-    .domain_id = identity.domain_id,
-    .project_secret = identity.project_secret,
-};
+constexpr auto project =
+    ripstop::codec::make_project_options("your-company:your-product:change-this");
 ```
 
 Keep this seed stable after shipping. Changing it makes existing encoded assets unreadable.
-For a reusable config header, copy
+No generated file or setup tool is required. For a reusable central config header, optionally copy
 [`templates/RipStop_Config.example.h`](templates/RipStop_Config.example.h) and change only
 `kProjectSeed`.
 
@@ -69,7 +63,7 @@ if (!decoded) {
 ```
 
 Compression and built-in scrambling are enabled by default. Most applications need no custom
-scrambler, hook, policy class, or generated code. Full runnable example:
+scrambler, hook, policy class, config generator, or generated code. Full runnable example:
 [`examples/basic.cpp`](examples/basic.cpp).
 
 ## Asset identity
@@ -114,6 +108,9 @@ Most users should keep the built-in scrambler. A custom scrambler must:
 
 See [`examples/custom_scrambler.cpp`](examples/custom_scrambler.cpp).
 
+Legacy v1.0 custom scramblers using ID `0` remain supported. New custom integrations should use a
+nonzero ID so assets identify their algorithm unambiguously.
+
 ## Important limits
 
 - Format v1 uses native little-endian, native object representation for typed overloads.
@@ -128,8 +125,5 @@ See [`examples/custom_scrambler.cpp`](examples/custom_scrambler.cpp).
 
 - [installation and source integration](INSTALL.md)
 - [wire format and threat model](docs/SPEC.md)
-- [compatibility policy](docs/COMPATIBILITY.md)
 - [changelog](CHANGELOG.md)
-- [security policy](SECURITY.md)
-- [contributing](CONTRIBUTING.md)
 - [third-party notices](NOTICE)

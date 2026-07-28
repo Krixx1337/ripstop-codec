@@ -5,12 +5,8 @@
 #include <vector>
 
 int main() {
-    constexpr auto identity = ripstop::codec::GenerateIdentity("example:replace-with-your-project");
-    const ripstop::codec::ProjectOptions project{
-        .magic = identity.magic,
-        .domain_id = identity.domain_id,
-        .project_secret = identity.project_secret,
-    };
+    constexpr auto project =
+        ripstop::codec::make_project_options("example:replace-with-your-project");
 
     const std::vector<float> input{1.0f, 2.0f, 3.0f};
     const auto encoded = ripstop::codec::encode(std::span{input}, project);

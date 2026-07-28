@@ -73,6 +73,14 @@ struct PackedPoint {
 
 static_assert(std::has_unique_object_representations_v<PackedPoint>);
 
+constexpr auto k_seed_project = make_project_options("test-project-seed");
+constexpr auto k_seed_identity = GenerateIdentity("test-project-seed");
+static_assert(k_seed_project.magic == k_seed_identity.magic);
+static_assert(k_seed_project.domain_id == k_seed_identity.domain_id);
+static_assert(k_seed_project.project_secret == k_seed_identity.project_secret);
+static_assert(k_seed_project.scramble_id == Header::ScrambleSplitMix64);
+static_assert(k_seed_project.scrambler == nullptr);
+
 } // namespace
 
 TEST_CASE("round-trip integrity across compression and scrambling permutations") {
@@ -296,7 +304,7 @@ TEST_CASE("encoding is deterministic with default nonce and no padding") {
     CHECK(first.value == second.value);
 }
 
-TEST_CASE("v1.0.1 golden asset remains byte-compatible") {
+TEST_CASE("format-v1 golden asset remains byte-compatible") {
     const ProjectOptions project = make_project();
     const AssetOptions asset = make_asset();
     const std::vector<std::uint8_t> input{
