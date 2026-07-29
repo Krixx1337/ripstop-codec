@@ -148,16 +148,13 @@ if(RIPSTOP_BUILD_TESTS)
 
   add_executable(ripstop-codec-tests tests/test_ripstop.cpp)
   target_link_libraries(ripstop-codec-tests PRIVATE RipStopCodec::ripstop-codec)
-  target_include_directories(ripstop-codec-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-  add_test(NAME ripstop-codec-tests COMMAND ripstop-codec-tests)
-
-  add_executable(ripstop-codec-config-template-smoke tests/config_template_smoke.cpp)
-  target_link_libraries(ripstop-codec-config-template-smoke PRIVATE RipStopCodec::ripstop-codec)
   target_include_directories(
-    ripstop-codec-config-template-smoke
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/templates
+    ripstop-codec-tests
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/templates
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party
   )
-  add_test(NAME ripstop-codec-config-template-smoke COMMAND ripstop-codec-config-template-smoke)
+  add_test(NAME ripstop-codec-tests COMMAND ripstop-codec-tests)
 endif()
 
 if(RIPSTOP_BUILD_EXAMPLES)

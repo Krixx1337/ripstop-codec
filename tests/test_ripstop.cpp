@@ -4,6 +4,8 @@
 #include <ripstop/Codec.h>
 #include <ripstop/MemStream.h>
 
+#include <RipStop_Config.example.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -458,6 +460,20 @@ TEST_CASE("asset context and padding round-trip predictably") {
     CHECK((wrong_context_error == ErrorCode::DecompressionFailed ||
            wrong_context_error == ErrorCode::CrcMismatch));
 
+    const auto decoded = decode(*encoded, project, asset);
+    REQUIRE(decoded);
+    CHECK(decoded.value == input);
+}
+
+TEST_CASE("config template round-trips with default helpers") {
+    const auto project = ripstop_config::MakeProjectOptions();
+    const auto asset = ripstop_config::MakeAssetOptions(
+        ripstop_config::tagPrimaryAsset,
+        ripstop_config::HashContextString("config-template-smoke"));
+    const std::vector<std::uint8_t> input{1, 2, 3, 4};
+
+    const auto encoded = encode(std::span{input}, project, asset);
+    REQUIRE(encoded);
     const auto decoded = decode(*encoded, project, asset);
     REQUIRE(decoded);
     CHECK(decoded.value == input);
