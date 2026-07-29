@@ -104,7 +104,7 @@ Use `AssetOptions` when a project has multiple asset classes or logical asset ID
 ```cpp
 const ripstop::codec::AssetOptions asset{
     .format_tag = ripstop::codec::utils::hash_string("mesh"),
-    .context_seed = ripstop::codec::utils::hash_string("maps/queensdale"),
+    .context_seed = ripstop::codec::utils::hash_string("maps/forest_region"),
 };
 
 auto encoded = ripstop::codec::encode(bytes, project, asset);
