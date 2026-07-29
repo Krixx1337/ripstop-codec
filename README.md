@@ -11,8 +11,9 @@ RipStop provides:
 - byte, typed, file, and `std::istream`-bridge APIs
 - no callbacks, logging, retries, or process termination
 
-RipStop is obfuscation and integrity protection, not encryption. Do not use it for credentials,
-personal data, or secrets requiring cryptographic confidentiality.
+RipStop provides asset obfuscation plus corruption and decode-context checks. It does not provide
+encryption, cryptographic confidentiality, or protection against intentional forgery. Do not use it
+for credentials, personal data, or cryptographic secrets.
 
 ## Quick start
 
@@ -81,8 +82,9 @@ auto decoded = ripstop::codec::decode(*encoded, project, asset);
 ```
 
 `format_tag`, `context_seed`, and `password` are caller-supplied decode context; they are not stored
-in the header. Wrong values fail decompression or CRC validation. Leave `nonce = 0` for reproducible
-builds.
+in the header. Wrong values fail decompression or CRC validation. The password is only another
+non-cryptographic scramble input. Leave `nonce = 0` for reproducible builds; use a varying nonce
+only when non-deterministic output is useful for anti-diffing.
 
 ## Error handling
 
