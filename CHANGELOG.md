@@ -12,6 +12,8 @@
 - Preserved existing POSIX destination permissions during transactional replacement.
 - Fixed `MemStream` initialization and constrained secure wiping to live safe buffers.
 - Added installable CMake package metadata, isolated test and fuzz instrumentation, examples, and adoption docs.
+- Replaced checked-in dependency copies with CPM-managed release tags.
+- Updated miniz to 3.1.2 and doctest to 2.5.3 without changing format-v1 output.
 
 ## 1.0.1
 

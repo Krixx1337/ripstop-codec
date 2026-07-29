@@ -17,7 +17,7 @@
 #endif
 
 extern "C" {
-#include <miniz/miniz.h>
+#include <miniz.h>
 }
 
 namespace ripstop::codec {

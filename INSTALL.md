@@ -2,6 +2,9 @@
 
 RipStop Codec is a C++20 static library.
 
+The first uncached CMake configure downloads a pinned, hash-verified CPM script and pinned source
+dependencies. Later configurations reuse the build cache or an optional shared CPM source cache.
+
 ## CMake subdirectory
 
 ```cmake
@@ -32,18 +35,26 @@ target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
 
 Configure with `-DCMAKE_PREFIX_PATH=C:\deps\ripstop` when the prefix is not otherwise discoverable.
 
-## Manual source integration
+## Dependency cache
 
-Add:
+Set `CPM_SOURCE_CACHE` to reuse downloaded dependency sources across build directories and projects:
 
-- include path: `include/`
-- private implementation include path: `third_party/`
-- C++ source: `src/RipStop.cpp`
-- C source: `third_party/miniz/miniz.c`
-- C definition for miniz: `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`
-- language modes: C++20 and C99
+```powershell
+$env:CPM_SOURCE_CACHE = "C:\deps\cpm-cache"
+cmake --preset x64-debug
+```
 
-`CMakeLists.txt` remains the canonical source list.
+After the pinned sources exist in that cache, fresh build directories can configure offline. Local
+source checkouts can also be selected explicitly:
+
+```powershell
+cmake --preset x64-debug `
+  -DCPM_ripstop_miniz_SOURCE=C:\src\miniz `
+  -DCPM_doctest_SOURCE=C:\src\doctest
+```
+
+The doctest dependency is requested only when `RIPSTOP_BUILD_TESTS=ON`. Installed RipStop packages
+do not require CPM, miniz, or doctest to be installed separately.
 
 ## Project setup
 

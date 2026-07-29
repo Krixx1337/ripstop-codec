@@ -28,6 +28,8 @@ option(RIPSTOP_BUILD_TESTS "Build RipStop Codec tests" ${RIPSTOP_BUILD_TESTS_DEF
 option(RIPSTOP_BUILD_EXAMPLES "Build RipStop Codec examples" OFF)
 option(RIPSTOP_BUILD_FUZZER "Build the Clang libFuzzer decode target" OFF)
 
+include(cmake/RipStopDependencies.cmake)
+
 add_library(ripstop-codec STATIC)
 add_library(RipStopCodec::ripstop-codec ALIAS ripstop-codec)
 
@@ -35,7 +37,7 @@ target_sources(
   ripstop-codec
   PRIVATE
     src/RipStop.cpp
-    third_party/miniz/miniz.c
+    ${RIPSTOP_MINIZ_SOURCES}
   PUBLIC
     FILE_SET public_headers
     TYPE HEADERS
@@ -55,7 +57,7 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+    ${RIPSTOP_MINIZ_INCLUDE_DIRS}
 )
 
 target_compile_features(ripstop-codec PUBLIC cxx_std_20)
@@ -142,8 +144,12 @@ if(RIPSTOP_BUILD_TESTS)
   enable_testing()
 
   add_executable(ripstop-codec-tests tests/test_ripstop.cpp)
-  target_link_libraries(ripstop-codec-tests PRIVATE RipStopCodec::ripstop-codec)
-  target_include_directories(ripstop-codec-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
+  target_link_libraries(
+    ripstop-codec-tests
+    PRIVATE
+      RipStopCodec::ripstop-codec
+      doctest::doctest
+  )
   add_test(NAME ripstop-codec-tests COMMAND ripstop-codec-tests)
 endif()
 
@@ -164,13 +170,13 @@ if(RIPSTOP_BUILD_FUZZER)
     ripstop-codec-fuzz-decode
     tests/fuzz_decode.cpp
     src/RipStop.cpp
-    third_party/miniz/miniz.c
+    ${RIPSTOP_MINIZ_SOURCES}
   )
   target_include_directories(
     ripstop-codec-fuzz-decode
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
-      ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+      ${RIPSTOP_MINIZ_INCLUDE_DIRS}
   )
   target_compile_features(ripstop-codec-fuzz-decode PRIVATE cxx_std_20)
   target_compile_definitions(

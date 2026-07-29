@@ -1,11 +1,19 @@
-RipStop Codec bundles the following third-party components:
+RipStop Codec uses the following third-party components:
 
 1. miniz
-Location: `third_party/miniz/miniz.c`, `third_party/miniz/miniz.h`
-Upstream notice: `miniz.c 3.1.0 - public domain deflate/inflate ... See "unlicense" statement at the end of this file.`
-Project note: this bundled copy is distributed under its upstream terms.
+Version: 3.1.2
+Source: https://github.com/richgel999/miniz
+Release tag: 3.1.2
+Project note: miniz is compiled into RipStop under its upstream license terms.
 
 2. doctest
-Location: `third_party/doctest/doctest.h`
-Upstream notice: `Distributed under the MIT Software License`
-Project note: this bundled copy is distributed under its upstream MIT license.
+Version: 2.5.3
+Source: https://github.com/doctest/doctest
+Release tag: v2.5.3
+Project note: doctest is used only for RipStop's tests under its upstream MIT license.
+
+3. CPM.cmake
+Version: 0.43.1
+Source: https://github.com/cpm-cmake/CPM.cmake
+Project note: CPM is downloaded during configure, verified by SHA-256, and used under its upstream
+MIT license.
