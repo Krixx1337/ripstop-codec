@@ -169,13 +169,45 @@ if(RIPSTOP_BUILD_EXAMPLES)
 endif()
 
 if(RIPSTOP_BUILD_FUZZER)
-  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang" OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR "RIPSTOP_BUILD_FUZZER requires Clang with libFuzzer")
   endif()
 
-  target_compile_options(ripstop-codec PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
-  add_executable(ripstop-codec-fuzz-decode tests/fuzz_decode.cpp)
-  target_link_libraries(ripstop-codec-fuzz-decode PRIVATE RipStopCodec::ripstop-codec)
-  target_compile_options(ripstop-codec-fuzz-decode PRIVATE -fsanitize=fuzzer,address,undefined)
+  add_executable(
+    ripstop-codec-fuzz-decode
+    tests/fuzz_decode.cpp
+    src/RipStop.cpp
+    third_party/miniz/miniz.c
+  )
+  target_include_directories(
+    ripstop-codec-fuzz-decode
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+  )
+  target_compile_features(ripstop-codec-fuzz-decode PRIVATE cxx_std_20)
+  target_compile_definitions(
+    ripstop-codec-fuzz-decode
+    PRIVATE
+      RIPSTOP_CODEC_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+      RIPSTOP_CODEC_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+      RIPSTOP_CODEC_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+      RIPSTOP_CODEC_VERSION_STRING="${PROJECT_VERSION}"
+      MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
+      HOSTILE_CORE_EXPORT=
+      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
+      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
+  )
+  set_target_properties(
+    ripstop-codec-fuzz-decode
+    PROPERTIES
+      C_STANDARD 99
+      C_STANDARD_REQUIRED YES
+      C_EXTENSIONS NO
+      CXX_STANDARD 20
+      CXX_STANDARD_REQUIRED YES
+      CXX_EXTENSIONS NO
+  )
+  target_compile_options(ripstop-codec-fuzz-decode PRIVATE -fsanitize=fuzzer-no-link,address,undefined)
   target_link_options(ripstop-codec-fuzz-decode PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()

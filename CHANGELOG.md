@@ -9,8 +9,9 @@
 - Added one-line deterministic `make_project_options(seed)` setup and removed the Python config generator.
 - Allowed typed encoding of all trivially copyable values.
 - Added stricter header validation and transactional file replacement.
+- Preserved existing POSIX destination permissions during transactional replacement.
 - Fixed `MemStream` initialization and constrained secure wiping to live safe buffers.
-- Added installable CMake package metadata, isolated test options, examples, and adoption docs.
+- Added installable CMake package metadata, isolated test and fuzz instrumentation, examples, and adoption docs.
 
 ## 1.0.1
 

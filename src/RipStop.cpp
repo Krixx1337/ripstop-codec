@@ -411,6 +411,18 @@ void transform_header(Header& header, const ProjectOptions& project) {
 
 [[nodiscard]] ErrorCode write_file_bytes(const std::filesystem::path& output_path,
                                          std::span<const std::uint8_t> data) {
+#if !defined(_WIN32)
+    std::error_code destination_status_error;
+    const std::filesystem::file_status destination_status =
+        std::filesystem::status(output_path, destination_status_error);
+    if (destination_status_error &&
+        destination_status_error != std::errc::no_such_file_or_directory) {
+        return ErrorCode::FileWriteFailed;
+    }
+    const bool preserve_destination_permissions =
+        !destination_status_error && std::filesystem::exists(destination_status);
+#endif
+
     std::filesystem::path temp_path = output_path;
     temp_path += std::filesystem::path{
         ".ripstop." + std::to_string(make_entropy_seed(data.size())) + ".tmp"};
@@ -445,6 +457,20 @@ void transform_header(Header& header, const ProjectOptions& project) {
         return ErrorCode::FileWriteFailed;
     }
 #else
+    if (preserve_destination_permissions) {
+        std::error_code permissions_error;
+        std::filesystem::permissions(
+            temp_path,
+            destination_status.permissions(),
+            std::filesystem::perm_options::replace,
+            permissions_error);
+        if (permissions_error) {
+            std::error_code ignored;
+            std::filesystem::remove(temp_path, ignored);
+            return ErrorCode::FileWriteFailed;
+        }
+    }
+
     std::error_code rename_error;
     std::filesystem::rename(temp_path, output_path, rename_error);
     if (rename_error) {

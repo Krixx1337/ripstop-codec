@@ -480,6 +480,29 @@ TEST_CASE("file helpers round-trip through transactional replacement") {
     REQUIRE(encode_file(input_path, encoded_path, project) == ErrorCode::Success);
     REQUIRE(decode_file(encoded_path, decoded_path, project) == ErrorCode::Success);
 
+#if !defined(_WIN32)
+    constexpr auto private_permissions =
+        std::filesystem::perms::owner_read | std::filesystem::perms::owner_write;
+    std::error_code permissions_error;
+    std::filesystem::permissions(
+        encoded_path,
+        private_permissions,
+        std::filesystem::perm_options::replace,
+        permissions_error);
+    REQUIRE_FALSE(permissions_error);
+    std::filesystem::permissions(
+        decoded_path,
+        private_permissions,
+        std::filesystem::perm_options::replace,
+        permissions_error);
+    REQUIRE_FALSE(permissions_error);
+
+    REQUIRE(encode_file(input_path, encoded_path, project) == ErrorCode::Success);
+    REQUIRE(decode_file(encoded_path, decoded_path, project) == ErrorCode::Success);
+    CHECK(std::filesystem::status(encoded_path).permissions() == private_permissions);
+    CHECK(std::filesystem::status(decoded_path).permissions() == private_permissions);
+#endif
+
     std::ifstream decoded_file(decoded_path, std::ios::binary);
     const std::vector<std::uint8_t> decoded{
         std::istreambuf_iterator<char>{decoded_file},
