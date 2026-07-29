@@ -1,251 +1,69 @@
-# RipStop Codec Integration Guide
+# Installation
 
-`RipStop Codec` is a C++20 static library. This document covers the two supported integration paths for open-source and in-house projects.
+RipStop Codec is a C++20 static library.
 
-Recommended order:
-
-1. CMake integration
-2. manual source integration without CMake
-
-`ProjectOptions` is intentionally project-owned input. In particular, `magic` does not have a library default, so each integration supplies its own file marker instead of inheriting a shared global signature.
-
-## Recommended: CMake Integration
-
-Add the library as a subdirectory and link the CMake target:
+## CMake subdirectory
 
 ```cmake
 add_subdirectory(path/to/ripstop-codec)
-target_link_libraries(MyProject PRIVATE ripstop-codec)
+target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
 ```
 
-You can also link the alias target:
+Tests default on only when RipStop is the top-level project. Parent projects do not inherit test
+headers, config definitions, or test targets. Explicit controls:
 
 ```cmake
-target_link_libraries(MyProject PRIVATE RipStopCodec::ripstop-codec)
+set(RIPSTOP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(RIPSTOP_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 ```
 
-This path automatically carries the public headers, the private third-party include path used by the codec implementation, and the C++20 requirement through the target definition in `CMakeLists.txt`.
+## Installed package
 
-## Supported Fallback: Manual Source Integration
+```powershell
+cmake --install out/build/x64-release --prefix C:\deps\ripstop
+```
 
-Use this when your project does not use CMake and you want to compile the codec directly inside an existing build system such as a Visual Studio solution, custom game build pipeline, or another native project format.
+Consumer:
 
-This path is supported, but `CMakeLists.txt` remains the authoritative source of truth for the current implementation source list, include paths, and compile definitions.
+```cmake
+find_package(RipStopCodec 1.1 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
+```
 
-1. Add `include/` to your project's include directories.
-2. Add `third_party/` to your project's include directories.
-3. Add `src/RipStop.cpp` to your project's source files.
-4. Add `third_party/miniz/miniz.c` to your project's source files and compile it with `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`.
-5. Build the project as C++20 or newer.
+Configure with `-DCMAKE_PREFIX_PATH=C:\deps\ripstop` when the prefix is not otherwise discoverable.
 
-Notes:
+## Manual source integration
 
-- `src/RipStop.cpp` is C++ and must be compiled with C++20 support.
-- `third_party/miniz/miniz.c` is C and is bundled as the codec's compression backend.
-- `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1` keeps the bundled `miniz` private so it does not collide with another linked `zlib` or `miniz`.
-- No Visual Studio `.props` files are required. The repository keeps the integration surface intentionally small so the same instructions work across build systems.
+Add:
 
-Manual integration checklist:
+- include path: `include/`
+- private implementation include path: `third_party/`
+- C++ source: `src/RipStop.cpp`
+- C source: `third_party/miniz/miniz.c`
+- C definition for miniz: `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`
+- language modes: C++20 and C99
 
-- Required implementation sources:
-  - `src/RipStop.cpp`
-  - `third_party/miniz/miniz.c`
-- Required include paths:
-  - `include/`
-  - `third_party/`
-- Required compile definitions:
-  - `MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1`
-- Required language standards:
-  - C++20 or newer for `src/RipStop.cpp`
-  - C99 or newer for `third_party/miniz/miniz.c`
+`CMakeLists.txt` remains the canonical source list.
 
-When upgrading RipStop in a manually vendored integration, re-check `CMakeLists.txt` before updating your downstream build files. The goal is to keep the manual source surface small and stable, but `CMakeLists.txt` is the canonical definition of what the library builds.
+## Project setup
 
-## Generating your Project Config
-
-The default path is:
-
-1. Copy [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h) into your project as `RipStop_Config.h`.
-2. Change `kProjectSeed` to a project-unique string.
-
-The template derives project-owned `magic`, `domain_id`, tags, and an obfuscated project secret at compile time, so manual source-drop integrations do not need a separate preprocessing step.
-
-If you prefer randomized constants, `python tools/generate_config.py` is still available as a power-user path. By default it writes `RipStop_Config.h` into the current working directory. Use `--out path/to/RipStop_Config.h` when you want to place it somewhere specific.
-
-## Technical Notes
-
-### Simple Path
-
-`AssetOptions` is optional in the public API, so the minimal integration path is:
+No generated config is required:
 
 ```cpp
-auto encoded = ripstop::codec::encode(bytes, project);
-auto decoded = ripstop::codec::decode(encoded.value, project);
+constexpr auto project =
+    ripstop::codec::make_project_options("your-company:your-product");
 ```
 
-### Recommended Default Profile
+Keep that seed stable after shipping because changing it invalidates existing assets. Projects
+wanting central tags and helpers may copy `templates/RipStop_Config.example.h` and change only
+`kProjectSeed`. Explicit `ProjectOptions` remains available for existing assets and advanced setups.
 
-For most integrations, start here:
+## Build and test
 
-```cpp
-auto encoded = ripstop::codec::encode(bytes, project, {
-    .format_tag = 0x11223344u,
-    .context_seed = ripstop::codec::utils::hash_string("textures/player_idle"),
-    .compress = true,
-    .scramble = true,
-});
+```powershell
+cmake --preset x64-debug
+cmake --build --preset x64-debug
+ctest --preset x64-debug
 ```
 
-Recommended policy:
-
-- set `format_tag` per asset class
-- derive `context_seed` from a stable logical asset identifier
-- leave `nonce = 0`
-- leave `password` empty
-- use the built-in scrambler unless you have a defined project-specific requirement
-
-Canonical `context_seed` policy example:
-
-```cpp
-const std::uint64_t context_seed =
-    ripstop::codec::utils::hash_string("textures/player_idle");
-```
-
-This gives deterministic output for unchanged assets while still separating payload state per asset.
-
-### Advanced Options
-
-When you need extra separation, pass `AssetOptions` explicitly:
-
-```cpp
-auto encoded = ripstop::codec::encode(bytes, project, {
-    .format_tag = 0x11223344u,
-    .context_seed = 0x55667788u,
-    .nonce = 0x1020304050607080ull,
-    .padding_size = 16,
-    .password = "Secret",
-});
-```
-
-`AssetOptions` defaults to `compress = true` and `scramble = true`. You can disable either independently:
-
-```cpp
-auto encoded = ripstop::codec::encode(bytes, project, {
-    .format_tag = 0x11223344u,
-    .compress = false,
-    .scramble = true,
-});
-```
-
-`nonce` is optional and defaults to `0`, which preserves deterministic output for identical inputs. Set a non-zero `nonce` when you want anti-diffing behavior. `padding_size` inserts 0-255 junk bytes after the fixed header so the payload starts at a caller-selected offset.
-
-Treat `password`, `nonce`, and custom `scrambler` support as advanced features. They are useful for specific workflows, but they are not required for the recommended default profile.
-
-### Typed Encode/Decode Safety
-
-The typed `encode()` / `decode()` overloads require `std::has_unique_object_representations_v<T>`. This intentionally rejects padded types.
-
-```cpp
-struct Bad {
-    char a;
-    int b;
-}; // usually rejected due to padding
-
-struct Good {
-    int a;
-    int b;
-}; // OK
-```
-
-If your type is rejected, serialize it explicitly or define a packed/byte-stable representation.
-
-### Custom Scrambler Integration
-
-Projects can replace the built-in SplitMix64 XOR pass by filling `ProjectOptions::scramble_id` and `ProjectOptions::scrambler`. This is an advanced integration path. The header stores the scrambler id, and decode requires the caller to provide a matching scrambler id and function pair. If a non-zero `scramble_id` is configured without a scrambler function, encode/decode fails with `MissingScramblerFunc`.
-
-The example blueprint lives in [`templates/RipStop_Config.example.h`](./templates/RipStop_Config.example.h).
-
-### Header Peeking
-
-Use `peek_header()` to validate or inspect files without full decode:
-
-```cpp
-auto header = ripstop::codec::peek_header(raw_file_bytes, project);
-if (header && header.value.asset_version < 2) {
-    // Trigger asset rebuild...
-}
-```
-
-`peek_header()` requires the full `ProjectOptions` because header fields from offset 4 onward are XOR-masked with project-derived state before storage.
-
-When you only need a quick loader gate, use `is_encoded()` with the expected project magic:
-
-```cpp
-if (ripstop::codec::is_encoded(raw_file_bytes, project.magic)) {
-    auto decoded = ripstop::codec::decode(raw_file_bytes, project);
-}
-```
-
-### Decode Into Pre-Allocated Storage
-
-Use `decode_into()` when the destination storage is already allocated:
-
-```cpp
-std::vector<std::byte> output(header.value.uncompressed_size);
-auto err = ripstop::codec::decode_into(encoded_bytes, std::span{output}, project, asset);
-```
-
-If the asset is both compressed and scrambled, `decode_into()` uses a temporary heap buffer for the descrambled compressed payload before decompression. The destination buffer remains caller-owned.
-
-### Text Decode Convenience
-
-Use `decode_to_string()` when the payload is text and you want a `std::string` result directly:
-
-```cpp
-auto json = ripstop::codec::decode_to_string(encoded_bytes, project);
-```
-
-`decode_to_string()` wipes the transient internal byte buffer that RipStop owns before returning the resulting `std::string`.
-
-### Secure Wipe Helpers
-
-Use `SecureWipe(...)` when you want to erase caller-owned buffers after use:
-
-```cpp
-std::string password = "Secret";
-ripstop::codec::SecureWipe(password);
-```
-
-Overloads exist for `std::string`, `std::vector<T>`, and `std::span<T>`.
-
-### Zero-Copy Stream Parsing
-
-When a downstream parser expects `std::istream`, include `<ripstop/MemStream.h>` and wrap the decoded bytes directly:
-
-```cpp
-#include <ripstop/MemStream.h>
-
-auto decoded = ripstop::codec::decode(encoded_bytes, project, asset);
-if (!decoded) {
-    // handle decoded.error
-}
-
-ripstop::codec::MemStream stream(std::span{decoded.value});
-```
-
-This is a header-only utility in `ripstop::codec`. It is intentionally separate from `<ripstop/Codec.h>` so projects that do not need stream adapters do not pay for extra includes, while C++20 callers still get a zero-copy bridge to older `std::istream`-based code.
-
-### File Helpers
-
-Use `encode_file()` and `decode_file()` when you want a one-call path for disk I/O:
-
-```cpp
-auto err = ripstop::codec::encode_file("input.bin", "output.rip", project);
-if (err != ripstop::codec::ErrorCode::Success) {
-    // log ripstop::codec::to_string(err)
-}
-```
-
-These helpers accept `std::filesystem::path`, which preserves native Unicode path handling on Windows and POSIX platforms.
-
-`<ripstop/MemStream.h>` is installed as a public header, so decoded buffers can also be wrapped in `ripstop::codec::MemStream` when you need `std::istream`-style parsing over in-memory data.
+Build examples with `-DRIPSTOP_BUILD_EXAMPLES=ON`.

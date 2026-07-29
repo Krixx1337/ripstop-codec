@@ -1,8 +1,18 @@
 #pragma once
 
+#ifndef RIPSTOP_CODEC_VERSION_MAJOR
 #define RIPSTOP_CODEC_VERSION_MAJOR 1
-#define RIPSTOP_CODEC_VERSION_MINOR 0
-#define RIPSTOP_CODEC_VERSION_PATCH 1
+#endif
+#ifndef RIPSTOP_CODEC_VERSION_MINOR
+#define RIPSTOP_CODEC_VERSION_MINOR 1
+#endif
+#ifndef RIPSTOP_CODEC_VERSION_PATCH
+#define RIPSTOP_CODEC_VERSION_PATCH 0
+#endif
+#ifndef RIPSTOP_CODEC_VERSION_STRING
+#define RIPSTOP_CODEC_VERSION_STRING "1.1.0"
+#endif
+
 #define RIPSTOP_CODEC_VERSION \
     (RIPSTOP_CODEC_VERSION_MAJOR * 10000 + RIPSTOP_CODEC_VERSION_MINOR * 100 + RIPSTOP_CODEC_VERSION_PATCH)
 
@@ -15,7 +25,6 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <memory>
 #include <string>
 #include <span>
 #include <string_view>
@@ -29,7 +38,7 @@ namespace ripstop::codec {
 }
 
 [[nodiscard]] constexpr std::string_view version_string() noexcept {
-    return "1.0.1";
+    return RIPSTOP_CODEC_VERSION_STRING;
 }
 
 using ScramblerFunc = void (*)(std::span<std::uint8_t> buffer, std::uint64_t state, const Header& header);
@@ -40,7 +49,6 @@ struct ProjectOptions {
     std::uint64_t project_secret = 0;
     std::uint8_t scramble_id = Header::ScrambleSplitMix64;
     ScramblerFunc scrambler = nullptr;
-    std::shared_ptr<ISecurityPolicy> policy;
 };
 
 struct ProjectIdentity {
@@ -121,7 +129,7 @@ template <typename T>
 }
 
 template <typename T>
-    requires std::has_unique_object_representations_v<T>
+    requires std::is_trivially_copyable_v<T>
 [[nodiscard]] Result<std::vector<std::uint8_t>> encode(std::span<const T> raw_buffer,
                                                        const ProjectOptions& project,
                                                        const AssetOptions& asset = {}) {
@@ -129,7 +137,7 @@ template <typename T>
 }
 
 template <typename T>
-    requires std::has_unique_object_representations_v<T>
+    requires std::is_trivially_copyable_v<T>
 [[nodiscard]] Result<std::vector<std::uint8_t>> decode(std::span<const T> encoded_buffer,
                                                        const ProjectOptions& project,
                                                        const AssetOptions& asset = {}) {
@@ -209,16 +217,27 @@ template <std::uint64_t Secret, std::uint8_t Mask>
     };
 }
 
+[[nodiscard]] consteval ProjectOptions make_project_options(std::string_view seed) noexcept {
+    const ProjectIdentity identity = GenerateIdentity(seed);
+    return ProjectOptions{
+        .magic = identity.magic,
+        .domain_id = identity.domain_id,
+        .project_secret = identity.project_secret,
+    };
+}
+
 inline void SecureWipe(std::string& value) noexcept {
     ::ripstop::codec::obf::secure_wipe(value);
 }
 
 template <typename T>
+    requires std::is_trivially_copyable_v<T>
 inline void SecureWipe(std::vector<T>& value) noexcept {
     ::ripstop::codec::obf::secure_wipe(value);
 }
 
 template <typename T>
+    requires std::is_trivially_copyable_v<T>
 inline void SecureWipe(std::span<T> value) noexcept {
     ::ripstop::codec::obf::secure_wipe(value);
 }

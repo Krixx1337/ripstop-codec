@@ -12,7 +12,8 @@ It wraps arbitrary byte buffers with:
 
 It is designed as a reusable codec layer that can sit in front of an existing binary format without changing that format's internal structure.
 
-Standard encryption is intentionally avoided in favor of lightweight scrambling that callers can customize per project.
+Encryption is intentionally outside this codec. Lightweight scrambling hides obvious asset
+structure without adding cryptographic key management or runtime cost.
 
 ---
 
@@ -34,7 +35,12 @@ Standard encryption is intentionally avoided in favor of lightweight scrambling 
 - trivial parsing based on recognizable magic values or obvious float arrays
 - reuse of one static XOR transform across multiple unrelated files
 
-`ripstop::codec` is not intended to resist a determined reverse engineer with debugger access, live process inspection, or recovered integration secrets.
+`ripstop::codec` is not intended to resist a determined reverse engineer with debugger access, live
+process inspection, or recovered integration inputs.
+
+It provides neither cryptographic confidentiality nor authenticity. An attacker who can inspect the
+application or modify assets should be assumed capable of recovering codec inputs and forging valid
+payloads.
 
 ---
 
@@ -57,12 +63,13 @@ The decode path is:
 
 1. parse and validate the header
 2. verify `magic`, `codec_version`, `scramble_id`, and `domain_id`
-3. descramble the stored payload with the caller-provided scrambler if needed
+3. descramble the stored payload with the built-in or explicitly configured scrambler if needed
 4. decompress if needed
 5. compute CRC32 over the final uncompressed buffer
 6. reject on mismatch by returning a structured error
 
-CRC32 is used as a fast corruption and decode-mismatch check. It is not a cryptographic anti-tamper mechanism.
+CRC32 is used as a fast accidental-corruption and decode-context mismatch check. It is not a
+cryptographic anti-tamper mechanism and does not prevent intentional forgery.
 
 ---
 
@@ -70,11 +77,11 @@ CRC32 is used as a fast corruption and decode-mismatch check. It is not a crypto
 
 The codec derives scrambling state from caller-supplied project and asset inputs:
 
-- `project_secret`: private application-owned secret
+- `project_secret`: stable application-owned scramble seed
 - `context_seed`: per-asset or per-context seed chosen by the caller
 - `format_tag`: asset-class discriminator chosen by the caller
-- `nonce`: optional advanced per-encode value for anti-diffing and non-deterministic output
-- `password`: optional advanced per-call `string_view` lever for additional separation
+- `nonce`: optional per-encode value for anti-diffing and non-deterministic output
+- `password`: optional per-call scramble input for additional deterministic separation
 
 State derivation is:
 
@@ -86,14 +93,21 @@ if password is not empty:
 state = mix64(state)
 ```
 
-The default scrambler then performs a SplitMix64-style XOR pass over the full payload buffer when `scramble_id == 0`. Callers may replace that scrambler entirely by providing `ProjectOptions::scrambler`, but custom scramblers are an advanced integration path.
+These derivation functions are non-cryptographic. `make_project_options(seed)` deterministically
+derives `project_secret` from the project identity seed; neither value should be treated as a
+cryptographic key. The password input is not processed by a password KDF.
+
+The default scrambler performs a SplitMix64-style XOR pass over the full payload buffer when
+`scramble_id == 0`. No custom code is needed. Advanced callers may replace it with
+`ProjectOptions::scrambler`; custom scramblers must use a stable nonzero ID and be deterministic and
+self-inverse.
 
 This gives the caller four independent levers:
 
 - project ownership separation
 - per-asset context binding
 - keystream separation between different payload classes
-- optional password-based separation
+- optional caller-supplied input separation
 
 Recommended default policy:
 
@@ -111,13 +125,16 @@ context_seed = hash_string("textures/player_idle")
 
 The codec does not enforce how `context_seed` or `format_tag` should be chosen, but using a stable logical asset identifier is the recommended baseline policy.
 
-`format_tag` and `context_seed` are intentionally not stored in the header. The caller must provide the same values again during decode. If decode is attempted with the wrong tag or seed, the derived scramble state will not match the encoded payload and the final CRC check will fail.
+`format_tag` and `context_seed` are intentionally not stored in the header. The caller must provide
+the same values again during decode. With a wrong tag or seed, scrambled compressed data may fail
+decompression; otherwise final CRC validation fails.
 
 ---
 
 ## 6. Binary Format
 
-The header is packed to 1-byte alignment and fixed at 40 bytes.
+Format v1 uses little-endian integers. The header is packed to 1-byte alignment and fixed at 40
+bytes. Encoded and decoded payload sizes are limited to 256 MiB.
 
 | Offset | Type | Field | Meaning |
 | :--- | :--- | :--- | :--- |
@@ -150,12 +167,15 @@ stored_crc = raw_crc32 ^ low32(project_secret)
 
 This prevents simple known-plaintext CRC guesses from matching obvious header bytes on disk.
 
-## 7. Security Features
+## 7. Obfuscation Features
 
 - Header Obfuscation: header bytes from offset 4 onward are XOR-masked with project-derived state, leaving only `magic` plaintext for quick detection.
 - CRC Masking: `masked_crc` prevents straightforward known-plaintext CRC scans against the on-disk header.
 - Contextual Binding: scramble state is derived from project secret, asset context, format tag, and optionally advanced inputs such as password and nonce.
 - Offset Randomization: `header_size` can exceed `sizeof(Header)` so callers can push the payload start forward with junk padding.
+
+These features raise the cost of casual inspection. They do not provide encryption, authentication,
+or protection from a determined reverse engineer.
 
 ---
 
@@ -164,6 +184,8 @@ This prevents simple known-plaintext CRC guesses from matching obvious header by
 The library exposes:
 
 - `ripstop::codec::ProjectOptions` and `ripstop::codec::AssetOptions`, which group the caller-controlled codec context
+- `ripstop::codec::make_project_options(seed)`, which deterministically derives default project
+  options from one compile-time project seed
 - `ripstop::codec::encode(...)`, which wraps a raw byte buffer into a caller-magic envelope and returns `Result<std::vector<std::uint8_t>>`
 - `ripstop::codec::decode(...)`, which validates and unwraps a caller-magic envelope back into raw bytes and returns `Result<std::vector<std::uint8_t>>`
 - `ripstop::codec::decode_to_string(...)`, which validates and unwraps a caller-magic envelope into `std::string`
@@ -171,12 +193,13 @@ The library exposes:
 - `ripstop::codec::peek_header(...)`, which validates and returns the unmasked header without decoding the payload
 - `ripstop::codec::decode_into(...)`, which decodes into caller-owned storage and returns `ErrorCode`
 - `ripstop::codec::decode_to_vector<T>(...)`, which decodes into a freshly allocated typed vector
-- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable string names in standard builds or hardened numeric strings when `RIPSTOP_HARDEN_ERRORS=1`
+- `ripstop::codec::to_string(ErrorCode)`, which maps error codes to stable readable names
 - `ripstop::codec::SecureWipe(...)`, which erases caller-owned sensitive buffers
 - `ripstop::codec::utils::hash_string(...)` and `ripstop::codec::utils::hash_uint64(...)`, which provide deterministic caller-owned seed derivation and are `constexpr`
 
 The simple path is intentionally supported:
 
+- `constexpr auto project = make_project_options("company:product")`
 - `encode(buffer, project)`
 - `decode(buffer, project)`
 - `decode_into(buffer, output, project)`
@@ -217,11 +240,11 @@ Decode failures are programmatically classified with `ripstop::codec::ErrorCode`
 
 The caller is responsible for:
 
-- generating and protecting `project_secret`
+- choosing stable project identity inputs and keeping them unchanged after shipping assets
 - choosing `domain_id`
 - deriving `context_seed`
 - choosing `format_tag`
-- choosing whether to use a custom `scramble_id` and `scrambler`
+- optionally maintaining a stable nonzero ID and self-inverse function when opting into a custom scrambler
 - keeping `password` policy consistent between encode and decode
 - interpreting `identity_type`
 - enforcing `asset_version` policy
@@ -239,4 +262,5 @@ The `ripstop::codec` package is intended to remain zero-knowledge:
 - no application secrets
 - no asset-class-specific policy
 
-Project-owned integration files such as secret configuration, seed derivation policy, and rebuild behavior should live outside this package.
+Project-owned integration files such as identity configuration, seed derivation policy, and rebuild
+behavior should live outside this package.

@@ -1,20 +1,11 @@
 #pragma once
 
-#include <ripstop/config_bridge.h>
-#include <ripstop/detail/polymorphic_error.h>
-
 #include <cassert>
 #include <cstdint>
 #include <string>
 #include <utility>
 
 namespace ripstop::codec {
-
-namespace detail {
-
-std::uint32_t ErrorXorKey() noexcept;
-
-} // namespace detail
 
 enum class ErrorCode : std::uint32_t {
     Success = 0,
