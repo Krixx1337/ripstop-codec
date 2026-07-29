@@ -33,10 +33,22 @@ Typical uses include:
 - hiding bundled resources, proprietary data files, presets, scripts, and internal caches
 - replacing recognizable file signatures with project-specific identity
 - binding encoded data to an expected project, asset class, or logical asset ID
+- adding resource protection to any game engine, desktop application, tool, or custom loader
 
 This is practical C++ asset obfuscation and file hardening against casual ripping—not DRM or
 cryptographic security. A determined reverse engineer who can inspect the running application can
 recover the data.
+
+## Where RipStop fits
+
+RipStop sits between plain archive packaging and cryptographic encryption:
+
+- easier and more robust than maintaining a one-off XOR-and-compression wrapper
+- lighter to integrate than an encryption stack with key management
+- harder to identify and casually extract than raw files or standard archive formats
+
+Use RipStop when you want an engine-agnostic C++ asset codec that raises the cost of automated
+extraction without pretending client-side assets can be made impossible to recover.
 
 ## Why RipStop?
 
