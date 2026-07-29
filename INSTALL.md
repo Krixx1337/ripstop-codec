@@ -54,9 +54,9 @@ constexpr auto project =
     ripstop::codec::make_project_options("your-company:your-product");
 ```
 
-Keep that seed stable after shipping because changing it invalidates existing assets. Projects
-wanting central tags and helpers may copy `templates/RipStop_Config.example.h` and change only
-`kProjectSeed`. Explicit `ProjectOptions` remains available for existing assets and advanced setups.
+Keep that seed stable after shipping because changing it invalidates existing assets. No generated
+or copied config file is required. Explicit `ProjectOptions` remains available for existing assets
+and advanced setups.
 
 ## Build and test
 

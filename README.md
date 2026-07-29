@@ -41,9 +41,7 @@ constexpr auto project =
 ```
 
 Keep this seed stable after shipping. Changing it makes existing encoded assets unreadable.
-No generated file or setup tool is required. For a reusable central config header, optionally copy
-[`templates/RipStop_Config.example.h`](templates/RipStop_Config.example.h) and change only
-`kProjectSeed`.
+No generated file, copied template, or setup tool is required.
 
 ### 3. Encode and decode
 

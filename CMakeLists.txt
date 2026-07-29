@@ -129,11 +129,6 @@ install(
 )
 
 install(
-  FILES templates/RipStop_Config.example.h
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/ripstop-codec/templates
-)
-
-install(
   FILES LICENSE NOTICE README.md INSTALL.md CHANGELOG.md
   DESTINATION ${CMAKE_INSTALL_DATADIR}/ripstop-codec
 )
@@ -148,12 +143,7 @@ if(RIPSTOP_BUILD_TESTS)
 
   add_executable(ripstop-codec-tests tests/test_ripstop.cpp)
   target_link_libraries(ripstop-codec-tests PRIVATE RipStopCodec::ripstop-codec)
-  target_include_directories(
-    ripstop-codec-tests
-    PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/templates
-      ${CMAKE_CURRENT_SOURCE_DIR}/third_party
-  )
+  target_include_directories(ripstop-codec-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
   add_test(NAME ripstop-codec-tests COMMAND ripstop-codec-tests)
 endif()
 
