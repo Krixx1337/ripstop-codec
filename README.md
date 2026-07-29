@@ -1,6 +1,11 @@
-# RipStop Codec
+# RipStop Codec — C++ Asset Protection and Obfuscation Library
 
-Small C++20 static library for wrapping assets in a project-specific binary envelope.
+**Lightweight C++20 asset protection library for making game assets, application resources, and
+proprietary binary files harder to identify and casually rip.**
+
+RipStop wraps existing data in a project-specific binary envelope. It adds compression, deterministic
+scrambling, contextual asset binding, and corruption checks without requiring a custom file format,
+custom scrambler, config generator, or encryption stack.
 
 RipStop provides:
 
@@ -14,6 +19,33 @@ RipStop provides:
 RipStop provides asset obfuscation plus corruption and decode-context checks. It does not provide
 encryption, cryptographic confidentiality, or protection against intentional forgery. Do not use it
 for credentials, personal data, or cryptographic secrets.
+
+## How do I protect assets from being ripped?
+
+Common files such as JSON, textures, meshes, shaders, audio, and custom binary blobs can expose
+recognizable headers or payload patterns. RipStop encodes those bytes into a project-specific wrapper
+so basic file inspection, signature scanning, and automated extraction tools have less obvious data
+to work with.
+
+Typical uses include:
+
+- protecting game assets such as maps, models, textures, shaders, audio, and dialogue
+- hiding bundled resources, proprietary data files, presets, scripts, and internal caches
+- replacing recognizable file signatures with project-specific identity
+- binding encoded data to an expected project, asset class, or logical asset ID
+
+This is practical C++ asset obfuscation and file hardening against casual ripping—not DRM or
+cryptographic security. A determined reverse engineer who can inspect the running application can
+recover the data.
+
+## Why RipStop?
+
+- **Plug and play:** provide one stable project seed, then call `encode()` and `decode()`
+- **Format agnostic:** wrap any in-memory bytes without redesigning their original format
+- **Small API:** byte, typed, file, and `std::istream`-bridge workflows
+- **Deterministic by default:** stable output supports reproducible builds and efficient patches
+- **Self-contained package:** installed consumers do not need to manage miniz, doctest, or CPM
+- **Predictable failures:** structured error codes; no hidden logging, callbacks, retries, or exits
 
 ## Quick start
 
