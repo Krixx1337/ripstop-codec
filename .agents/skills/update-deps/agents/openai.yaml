@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update RipStop Dependencies"
+  short_description: "Update RipStop CPM dependency tags safely."
+  default_prompt: "Use $update-deps to check and update RipStop dependencies."
