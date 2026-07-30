@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <RipStopSourceDir>$(MSBuildThisFileDirectory)..</RipStopSourceDir>
+    <RipStopBuildDir>$(RipStopSourceDir)\out\build\msbuild-$(Platform)-$(Configuration)</RipStopBuildDir>
+    <RipStopLibrary>$(RipStopBuildDir)\ripstop-codec.lib</RipStopLibrary>
+
+    <RipStopArchitecture Condition="'$(Platform)'=='x64'">x64</RipStopArchitecture>
+    <RipStopArchitecture Condition="'$(Platform)'=='Win32'">x86</RipStopArchitecture>
+
+    <RipStopRuntimeLibrary Condition="'$(RipStopRuntimeLibrary)'=='' and '$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RipStopRuntimeLibrary>
+    <RipStopRuntimeLibrary Condition="'$(RipStopRuntimeLibrary)'==''">MultiThreadedDLL</RipStopRuntimeLibrary>
+
+    <RipStopCMakeProgram Condition="'$(RipStopCMakeProgram)'=='' and Exists('$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe')">$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe</RipStopCMakeProgram>
+    <RipStopCMakeProgram Condition="'$(RipStopCMakeProgram)'=='' and Exists('$(DevEnvDir)CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe')">$(DevEnvDir)CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe</RipStopCMakeProgram>
+    <RipStopCMakeProgram Condition="'$(RipStopCMakeProgram)'==''">cmake</RipStopCMakeProgram>
+
+    <RipStopNinjaProgram Condition="'$(RipStopNinjaProgram)'=='' and Exists('$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe')">$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe</RipStopNinjaProgram>
+    <RipStopNinjaProgram Condition="'$(RipStopNinjaProgram)'=='' and Exists('$(DevEnvDir)CommonExtensions\Microsoft\CMake\Ninja\ninja.exe')">$(DevEnvDir)CommonExtensions\Microsoft\CMake\Ninja\ninja.exe</RipStopNinjaProgram>
+    <RipStopNinjaProgram Condition="'$(RipStopNinjaProgram)'==''">ninja</RipStopNinjaProgram>
+
+    <RipStopVsDevCmd Condition="'$(RipStopVsDevCmd)'=='' and Exists('$(VSInstallDir)Common7\Tools\VsDevCmd.bat')">$(VSInstallDir)Common7\Tools\VsDevCmd.bat</RipStopVsDevCmd>
+    <RipStopVsDevCmd Condition="'$(RipStopVsDevCmd)'=='' and Exists('$(DevEnvDir)..\Tools\VsDevCmd.bat')">$(DevEnvDir)..\Tools\VsDevCmd.bat</RipStopVsDevCmd>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RipStopSourceDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(RipStopLibrary);%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <Target Name="BuildRipStopCodec"
+          BeforeTargets="Link"
+          Condition="'$(DesignTimeBuild)'!='true'">
+    <Error Condition="'$(RipStopArchitecture)'==''"
+           Text="RipStop MSBuild integration supports x64 and Win32 platforms; got '$(Platform)'." />
+    <Error Condition="'$(RipStopVsDevCmd)'==''"
+           Text="RipStop could not locate VsDevCmd.bat. Build from a supported Visual Studio/MSVC environment." />
+
+    <Message Importance="High"
+             Text="Building RipStop Codec ($(Configuration)|$(Platform)) through CMake." />
+
+    <Exec Condition="!Exists('$(RipStopBuildDir)\CMakeCache.txt')"
+          Command="call &quot;$(RipStopVsDevCmd)&quot; -no_logo -arch=$(RipStopArchitecture) -host_arch=x64 &amp;&amp; &quot;$(RipStopCMakeProgram)&quot; -S &quot;$(RipStopSourceDir)&quot; -B &quot;$(RipStopBuildDir)&quot; -G Ninja -DCMAKE_MAKE_PROGRAM=&quot;$(RipStopNinjaProgram)&quot; -DCMAKE_BUILD_TYPE=$(Configuration) -DCMAKE_MSVC_RUNTIME_LIBRARY=$(RipStopRuntimeLibrary) -DRIPSTOP_BUILD_TESTS=OFF -DRIPSTOP_BUILD_EXAMPLES=OFF -DRIPSTOP_BUILD_FUZZER=OFF" />
+
+    <Exec Command="call &quot;$(RipStopVsDevCmd)&quot; -no_logo -arch=$(RipStopArchitecture) -host_arch=x64 &amp;&amp; &quot;$(RipStopCMakeProgram)&quot; --build &quot;$(RipStopBuildDir)&quot; --target ripstop-codec" />
+
+    <Error Condition="!Exists('$(RipStopLibrary)')"
+           Text="RipStop CMake build completed without producing '$(RipStopLibrary)'." />
+  </Target>
+</Project>

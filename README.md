@@ -75,6 +75,15 @@ find_package(RipStopCodec 1.1 CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE RipStopCodec::ripstop-codec)
 ```
 
+Native Visual Studio/MSBuild projects can instead import:
+
+```xml
+<Import Project="path\to\ripstop-codec\cmake\RipStop.MSBuild.targets" />
+```
+
+This builds and links RipStop through its own CMake target, keeping CPM and miniz private to
+RipStop. See [INSTALL.md](INSTALL.md) for requirements and generated output paths.
+
 ### 2. Provide one project-unique seed
 
 ```cpp
