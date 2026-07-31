@@ -43,28 +43,33 @@ if(NOT COMMAND CPMAddPackage)
   include("${_ripstop_cpm_file}")
 endif()
 
-CPMAddPackage(
-  NAME ripstop_miniz
-  VERSION 3.1.2
-  GITHUB_REPOSITORY richgel999/miniz
-  GIT_TAG 3.1.2
-  DOWNLOAD_ONLY YES
-  EXCLUDE_FROM_ALL YES
-  SYSTEM YES
-)
+if(NOT RIPSTOP_USE_ZLIB)
+  CPMAddPackage(
+    NAME ripstop_miniz
+    VERSION 3.1.2
+    GITHUB_REPOSITORY richgel999/miniz
+    GIT_TAG 3.1.2
+    DOWNLOAD_ONLY YES
+    EXCLUDE_FROM_ALL YES
+    SYSTEM YES
+  )
 
-set(
-  RIPSTOP_MINIZ_SOURCES
-  "${ripstop_miniz_SOURCE_DIR}/miniz.c"
-  "${ripstop_miniz_SOURCE_DIR}/miniz_tdef.c"
-  "${ripstop_miniz_SOURCE_DIR}/miniz_tinfl.c"
-)
+  set(
+    RIPSTOP_MINIZ_SOURCES
+    "${ripstop_miniz_SOURCE_DIR}/miniz.c"
+    "${ripstop_miniz_SOURCE_DIR}/miniz_tdef.c"
+    "${ripstop_miniz_SOURCE_DIR}/miniz_tinfl.c"
+  )
 
-set(
-  RIPSTOP_MINIZ_INCLUDE_DIRS
-  "${ripstop_miniz_SOURCE_DIR}"
-  "${CMAKE_CURRENT_LIST_DIR}/miniz"
-)
+  set(
+    RIPSTOP_MINIZ_INCLUDE_DIRS
+    "${ripstop_miniz_SOURCE_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}/miniz"
+  )
+else()
+  set(RIPSTOP_MINIZ_SOURCES)
+  set(RIPSTOP_MINIZ_INCLUDE_DIRS)
+endif()
 
 if(RIPSTOP_BUILD_TESTS)
   CPMAddPackage(

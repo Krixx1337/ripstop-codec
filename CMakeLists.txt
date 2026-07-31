@@ -27,17 +27,24 @@ endif()
 option(RIPSTOP_BUILD_TESTS "Build RipStop Codec tests" ${RIPSTOP_BUILD_TESTS_DEFAULT})
 option(RIPSTOP_BUILD_EXAMPLES "Build RipStop Codec examples" OFF)
 option(RIPSTOP_BUILD_FUZZER "Build the Clang libFuzzer decode target" OFF)
+# When embedding beside another miniz (e.g. kuba--/zip), use host zlib instead of
+# bundling CPM miniz to avoid duplicate mz_* / miniz_def_* linker symbols.
+option(RIPSTOP_USE_ZLIB "Use host zlib instead of bundling miniz" OFF)
 
 include(cmake/RipStopDependencies.cmake)
 
 add_library(ripstop-codec STATIC)
 add_library(RipStopCodec::ripstop-codec ALIAS ripstop-codec)
 
+set(RIPSTOP_CODEC_PRIVATE_SOURCES src/RipStop.cpp)
+if(NOT RIPSTOP_USE_ZLIB)
+  list(APPEND RIPSTOP_CODEC_PRIVATE_SOURCES ${RIPSTOP_MINIZ_SOURCES})
+endif()
+
 target_sources(
   ripstop-codec
   PRIVATE
-    src/RipStop.cpp
-    ${RIPSTOP_MINIZ_SOURCES}
+    ${RIPSTOP_CODEC_PRIVATE_SOURCES}
   PUBLIC
     FILE_SET public_headers
     TYPE HEADERS
@@ -56,9 +63,39 @@ target_include_directories(
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE
-    ${RIPSTOP_MINIZ_INCLUDE_DIRS}
 )
+
+if(RIPSTOP_USE_ZLIB)
+  target_include_directories(
+    ripstop-codec
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib_compat
+  )
+  if(TARGET ZLIB::ZLIB)
+    target_link_libraries(ripstop-codec PUBLIC ZLIB::ZLIB)
+  elseif(TARGET zlib)
+    get_target_property(_ripstop_zlib_type zlib TYPE)
+    if(NOT _ripstop_zlib_type STREQUAL "OBJECT_LIBRARY")
+      target_link_libraries(ripstop-codec PUBLIC zlib)
+    endif()
+  else()
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+      if(ZLIB_INCLUDE_DIRS)
+        target_include_directories(ripstop-codec PRIVATE ${ZLIB_INCLUDE_DIRS})
+      endif()
+      if(ZLIB_LIBRARIES)
+        target_link_libraries(ripstop-codec PUBLIC ${ZLIB_LIBRARIES})
+      endif()
+    endif()
+  endif()
+else()
+  target_include_directories(
+    ripstop-codec
+    PRIVATE
+      ${RIPSTOP_MINIZ_INCLUDE_DIRS}
+  )
+endif()
 
 target_compile_features(ripstop-codec PUBLIC cxx_std_20)
 
@@ -74,11 +111,17 @@ target_compile_definitions(
 target_compile_definitions(
   ripstop-codec
   PRIVATE
-    MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
     HOSTILE_CORE_EXPORT=
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
     $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
 )
+if(NOT RIPSTOP_USE_ZLIB)
+  target_compile_definitions(
+    ripstop-codec
+    PRIVATE
+      MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
+  )
+endif()
 
 set_target_properties(
   ripstop-codec
@@ -166,18 +209,29 @@ if(RIPSTOP_BUILD_FUZZER)
     message(FATAL_ERROR "RIPSTOP_BUILD_FUZZER requires Clang with libFuzzer")
   endif()
 
-  add_executable(
-    ripstop-codec-fuzz-decode
-    tests/fuzz_decode.cpp
-    src/RipStop.cpp
-    ${RIPSTOP_MINIZ_SOURCES}
-  )
+  set(RIPSTOP_FUZZ_SOURCES tests/fuzz_decode.cpp src/RipStop.cpp)
+  if(NOT RIPSTOP_USE_ZLIB)
+    list(APPEND RIPSTOP_FUZZ_SOURCES ${RIPSTOP_MINIZ_SOURCES})
+  endif()
+  add_executable(ripstop-codec-fuzz-decode ${RIPSTOP_FUZZ_SOURCES})
   target_include_directories(
     ripstop-codec-fuzz-decode
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
-      ${RIPSTOP_MINIZ_INCLUDE_DIRS}
   )
+  if(RIPSTOP_USE_ZLIB)
+    target_include_directories(
+      ripstop-codec-fuzz-decode
+      PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib_compat
+    )
+  else()
+    target_include_directories(
+      ripstop-codec-fuzz-decode
+      PRIVATE
+        ${RIPSTOP_MINIZ_INCLUDE_DIRS}
+    )
+  endif()
   target_compile_features(ripstop-codec-fuzz-decode PRIVATE cxx_std_20)
   target_compile_definitions(
     ripstop-codec-fuzz-decode
@@ -186,11 +240,17 @@ if(RIPSTOP_BUILD_FUZZER)
       RIPSTOP_CODEC_VERSION_MINOR=${PROJECT_VERSION_MINOR}
       RIPSTOP_CODEC_VERSION_PATCH=${PROJECT_VERSION_PATCH}
       RIPSTOP_CODEC_VERSION_STRING="${PROJECT_VERSION}"
-      MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
       HOSTILE_CORE_EXPORT=
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_FILE_OFFSET_BITS=64>
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:_LARGEFILE64_SOURCE=1>
   )
+  if(NOT RIPSTOP_USE_ZLIB)
+    target_compile_definitions(
+      ripstop-codec-fuzz-decode
+      PRIVATE
+        MINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
+    )
+  endif()
   set_target_properties(
     ripstop-codec-fuzz-decode
     PROPERTIES
